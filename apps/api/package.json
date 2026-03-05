@@ -1,0 +1,26 @@
+{
+  "name": "api",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Express.js API server",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "node src/main.js",
+    "dev": "node src/main.js",
+    "lint": "eslint . --quiet"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "helmet": "^7.1.0",
+    "morgan": "^1.10.0",
+    "pocketbase": "^0.21.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
