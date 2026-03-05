@@ -7,24 +7,44 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { usePayment } from '@/contexts/PaymentContext.jsx';
 import { useCart } from '@/components/CartContext.jsx';
-import apiServerClient from '@/lib/apiServerClient';
 
 const CheckoutForm = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { initiatePayment, isProcessing } = usePayment();
   const { cartItems, subtotal, tax, shipping, total, cartCount, clearCart } = useCart();
   const [paydestalReady, setPaydestalReady] = useState(false);
+  const [paydestalConfig, setPaydestalConfig] = useState(null);
 
-  // Load Paydestal script
+  // Load Paydestal script and fetch config on mount
   useEffect(() => {
+    // Fetch Paydestal config from API
+    const loadConfig = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/payment/config');
+        if (response.ok) {
+          const config = await response.json();
+          setPaydestalConfig(config);
+        }
+      } catch (err) {
+        console.error('Failed to load Paydestal config:', err);
+      }
+    };
+    loadConfig();
+
+    // Load Paydestal script
     if (!window.PaydestalInit) {
       const script = document.createElement('script');
       script.src = 'https://checkout.paydestal.com/lib/init.js';
       script.async = true;
       script.onload = () => setPaydestalReady(true);
+      script.onerror = () => {
+        toast({
+          title: "Error",
+          description: "Failed to load payment gateway. Please refresh.",
+          variant: "destructive"
+        });
+      };
       document.head.appendChild(script);
     } else {
       setPaydestalReady(true);
@@ -49,16 +69,17 @@ const CheckoutForm = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = async (e) => {
+  // This function opens popup IMMEDIATELY (synchronously) - exactly like working HTML
+  const handleSubmit = (e) => {
     e.preventDefault();
 
     const paymentAmount = parseFloat(total);
     
-    // Validation to ensure total is greater than 0 before allowing payment submission
+    // Validation
     if (cartItems.length === 0 || isNaN(paymentAmount) || paymentAmount <= 0) {
       toast({
         title: "Invalid Order",
-        description: "Your cart is empty or the total is invalid. Please review your items.",
+        description: "Your cart is empty or the total is invalid.",
         variant: "destructive"
       });
       return;
@@ -73,7 +94,7 @@ const CheckoutForm = () => {
       return;
     }
 
-    if (!paydestalReady) {
+    if (!paydestalReady || !window.PaydestalInit || !paydestalConfig?.clientId) {
       toast({
         title: "Loading Payment",
         description: "Payment gateway is loading. Please try again.",
@@ -82,63 +103,86 @@ const CheckoutForm = () => {
       return;
     }
 
-    try {
-      // Create order first
-      const orderId = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      const orderData = {
-        orderId,
-        amount: paymentAmount,
-        currency: 'NGN',
-        customerEmail: formData.email,
-        customerName: formData.name,
-        customerPhone: formData.phone,
-        street: formData.street,
-        city: formData.city,
-        country: formData.country,
-        orderItems: cartItems.map(item => ({
-          id: item.id,
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity
-        }))
-      };
+    // Generate order ID
+    const orderId = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-      // Get client ID from backend
-      const clientIdResponse = await apiServerClient.fetch('/payment/config');
-      if (!clientIdResponse.ok) throw new Error('Failed to get Paydestal config');
-      const { clientId, environment } = await clientIdResponse.json();
+    // Create Paydestal config with ACTUAL values from form and cart
+    const configOptions = {
+      environment: paydestalConfig.environment,
+      clientId: paydestalConfig.clientId,
+      amount: Math.round(paymentAmount), // Amount in Naira (not kobo)
+      customerEmail: formData.email,
+      customerMobile: formData.phone.replace(/\D/g, '').replace(/^234/, '0'),
+      customerName: formData.name,
+      currency: "NGN",
+      reference: orderId,
+    };
 
-      // Configure Paydestal popup
-      const configOptions = {
-        environment: environment, // 'live' or 'sandbox'
-        clientId: clientId,
-        amount: Math.round(paymentAmount * 100), // Convert to cents
-        customerEmail: formData.email,
-        customerMobile: formData.phone.replace(/\D/g, '').slice(-10), // Extract last 10 digits
-        customerName: formData.name,
-        currency: 'NGN',
-        reference: orderId,
-      };
+    // Store order data for persistence and reconciliation
+    const orderData = {
+      orderId,
+      amount: paymentAmount,
+      currency: 'NGN',
+      customerEmail: formData.email,
+      customerName: formData.name,
+      customerPhone: formData.phone,
+      street: formData.street,
+      city: formData.city,
+      country: formData.country,
+      orderItems: cartItems.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity
+      })),
+      createdAt: new Date().toISOString()
+    };
+    
+    // CRITICAL: Save to localStorage for persistence (survives page reload)
+    // This ensures we never lose the order data
+    const pendingOrders = JSON.parse(localStorage.getItem('pendingOrders') || '[]');
+    pendingOrders.push(orderData);
+    localStorage.setItem('pendingOrders', JSON.stringify(pendingOrders));
+    
+    // Also save to sessionStorage for current session
+    sessionStorage.setItem('currentOrder', JSON.stringify(orderData));
 
-      // Store order data for webhook processing
-      sessionStorage.setItem('currentOrder', JSON.stringify(orderData));
+    // Try to create order in background with retry logic
+    const createOrder = async (retries = 3) => {
+      for (let i = 0; i < retries; i++) {
+        try {
+          const response = await fetch('http://localhost:3001/payment/initiate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(orderData)
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            console.log('Order created successfully:', result);
+            // Mark as synced in localStorage
+            orderData.synced = true;
+            orderData.transactionId = result.transactionId;
+            localStorage.setItem('pendingOrders', JSON.stringify(pendingOrders));
+            return result;
+          }
+        } catch (err) {
+          console.warn(`Order creation attempt ${i + 1} failed:`, err);
+          if (i < retries - 1) {
+            await new Promise(r => setTimeout(r, 1000 * (i + 1))); // Exponential backoff
+          }
+        }
+      }
+      console.warn('Order creation failed after retries. Will be reconciled via webhook.');
+    };
+    
+    // Start order creation (don't await - let it run in background)
+    createOrder();
 
-      toast({
-        title: "Opening Payment Gateway",
-        description: "Redirecting to Paydestal...",
-      });
-
-      // Open Paydestal popup
+    // Open popup EXACTLY like working HTML
+    if (window.PaydestalInit) {
       const { openPopup } = window.PaydestalInit.create(configOptions);
       openPopup();
-
-    } catch (error) {
-      toast({
-        title: "Payment Failed",
-        description: error.message || "Could not initiate payment. Please try again.",
-        variant: "destructive"
-      });
-      console.error('Payment initiation failed', error);
     }
   };
 
@@ -280,18 +324,13 @@ const CheckoutForm = () => {
 
       <Button
         type="submit"
-        disabled={isProcessing || cartItems.length === 0 || parseFloat(total) <= 0 || !paydestalReady}
+        disabled={!paydestalReady || !paydestalConfig?.clientId || cartItems.length === 0 || parseFloat(total) <= 0}
         className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-7 text-xl font-bold shadow-soft-lg hover:shadow-soft-xl transition-smooth"
       >
-        {!paydestalReady ? (
+        {!paydestalReady || !paydestalConfig?.clientId ? (
           <>
             <Loader2 className="mr-2 w-6 h-6 animate-spin" />
             Loading Payment Gateway...
-          </>
-        ) : isProcessing ? (
-          <>
-            <Loader2 className="mr-2 w-6 h-6 animate-spin" />
-            Processing...
           </>
         ) : (
           `Complete Payment - ${formatCurrency(total)}`

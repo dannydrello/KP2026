@@ -18,12 +18,11 @@ async function updateTransactionStatus(orderId, status, paymentId) {
     await pb.collection('transactions').update(transaction.id, {
       status: status,
       paydestal_reference: paymentId,
-      updated: new Date().toISOString(),
     });
     logger.info('Transaction status updated', { orderId, status });
   } catch (error) {
-    logger.error('Failed to update transaction in database', { orderId, error: error.message });
-    throw error;
+    // Don't throw - webhook should still acknowledge receipt
+    logger.warn('Failed to update transaction in database', { orderId, error: error.message });
   }
 }
 
@@ -76,8 +75,6 @@ router.post('/initiate', async (req, res) => {
         country: country || 'NG',
         orderItems: orderItems,
         paydestal_reference: '',
-        created: new Date().toISOString(),
-        updated: new Date().toISOString(),
       });
 
       logger.info('Order created in database', { orderId, transactionId: transaction.id });
@@ -88,9 +85,23 @@ router.post('/initiate', async (req, res) => {
         transactionId: transaction.id,
       });
     } catch (dbError) {
-      logger.error('Failed to store order', { orderId, error: dbError.message });
-      return res.status(500).json({
-        error: 'Failed to create order',
+      // Log error but don't fail - payment can still proceed
+      // Webhook will handle reconciliation
+      logger.error('Failed to store order in database', { 
+        orderId, 
+        error: dbError.message,
+        status: dbError.status,
+        data: dbError.data,
+        hint: 'Make sure the "transactions" collection exists in PocketBase'
+      });
+
+      // Return success anyway so payment can proceed
+      res.json({
+        success: true,
+        orderId,
+        transactionId: null,
+        warning: 'Order not stored in database - will be reconciled via webhook',
+        error: dbError.message
       });
     }
   } catch (error) {

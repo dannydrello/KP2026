@@ -34,7 +34,10 @@ process.on('SIGTERM', async () => {
 	process.exit();
 });
 
-app.use(helmet());
+app.use(helmet({
+	crossOriginResourcePolicy: { policy: 'cross-origin' },
+	crossOriginEmbedderPolicy: false,
+}));
 app.use(cors({
 	origin: process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : process.env.CORS_ORIGIN,
 	credentials: true,

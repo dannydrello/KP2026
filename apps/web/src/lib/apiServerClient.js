@@ -1,4 +1,4 @@
-const API_SERVER_URL = process.env.NODE_ENV === 'development' 
+const API_SERVER_URL = import.meta.env.DEV 
   ? 'http://localhost:3001' 
   : '/hcgi/api';
 

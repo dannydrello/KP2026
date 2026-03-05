@@ -18,6 +18,35 @@ const PaymentSuccessPage = () => {
   const [paymentDetails, setPaymentDetails] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
 
+  // Sync any pending orders from localStorage
+  const syncPendingOrders = async () => {
+    const pendingOrders = JSON.parse(localStorage.getItem('pendingOrders') || '[]');
+    const unsyncedOrders = pendingOrders.filter(o => !o.synced);
+    
+    if (unsyncedOrders.length > 0) {
+      console.log('Syncing pending orders:', unsyncedOrders.length);
+      
+      for (const order of unsyncedOrders) {
+        try {
+          const response = await fetch('http://localhost:3001/payment/initiate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(order)
+          });
+          
+          if (response.ok) {
+            order.synced = true;
+            console.log('Synced order:', order.orderId);
+          }
+        } catch (err) {
+          console.warn('Failed to sync order:', order.orderId, err);
+        }
+      }
+      
+      localStorage.setItem('pendingOrders', JSON.stringify(pendingOrders));
+    }
+  };
+
   const checkStatus = async () => {
     if (!paymentId) {
       setStatus('failed');
@@ -27,11 +56,19 @@ const PaymentSuccessPage = () => {
 
     try {
       setStatus('verifying');
+      
+      // First sync any pending orders
+      await syncPendingOrders();
+      
       const data = await verifyPayment(paymentId);
       
       if (data.status === 'completed') {
         setStatus('completed');
         setPaymentDetails(data);
+        // Clear this order from pending
+        const pendingOrders = JSON.parse(localStorage.getItem('pendingOrders') || '[]');
+        const updated = pendingOrders.filter(o => o.orderId !== paymentId);
+        localStorage.setItem('pendingOrders', JSON.stringify(updated));
       } else if (data.status === 'failed') {
         setStatus('failed');
         setErrorMsg('Payment was marked as failed by the gateway.');
@@ -47,7 +84,7 @@ const PaymentSuccessPage = () => {
 
   useEffect(() => {
     checkStatus();
-    // eslint-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paymentId]);
 
   return (
@@ -144,7 +181,7 @@ const PaymentSuccessPage = () => {
                       <Button onClick={checkStatus} variant="outline" size="lg">
                         Try Verifying Again
                       </Button>
-                      <Link to="/checkout">
+                      <Link to="/order">
                         <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground">
                           Return to Checkout
                         </Button>

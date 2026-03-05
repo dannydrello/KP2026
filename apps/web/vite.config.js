@@ -245,7 +245,10 @@ export default defineConfig({
 		port: 3000,
 		cors: true,
 		headers: {
-			'Cross-Origin-Embedder-Policy': 'credentialless',
+			// Disabled COEP to allow Paydestal iframe to load
+			// 'Cross-Origin-Embedder-Policy': 'credentialless',
+			'Cross-Origin-Resource-Policy': 'cross-origin',
+			'Access-Control-Allow-Origin': '*',
 		},
 		allowedHosts: true,
 	},
