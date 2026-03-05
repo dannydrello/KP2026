@@ -169,3 +169,19 @@ WHATSAPP_INTEGRATION_ENABLED=false
 2. **Phone Format:** Must include leading zero (e.g., `08032834562`).
 3. **Popup Blocker:** Users must allow popups for the site.
 4. **Client ID:** Must be a valid Paydestal public key (starts with `PYD_`).
+
+5. **Environment Mode:** Use `PAYDESTAL_MODE=production` or `PAYDESTAL_MODE=live` for live payments. Anything else defaults to sandbox.
+
+---
+
+## Additional Fix: Environment Mode Detection
+
+**Problem:** API was checking for `PAYDESTAL_MODE === 'production'` only, but `.env` had `PAYDESTAL_MODE=live`, causing it to return 'sandbox' instead of 'live'.
+
+**Solution:** Updated the condition to accept both 'production' and 'live':
+
+```javascript
+environment: (PAYDESTAL_MODE === 'production' || PAYDESTAL_MODE === 'live') ? 'live' : 'sandbox',
+```
+
+**File Modified:** `apps/api/src/routes/payment.js`

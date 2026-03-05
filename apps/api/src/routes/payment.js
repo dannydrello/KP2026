@@ -38,7 +38,7 @@ router.get('/config', async (req, res) => {
 
     res.json({
       clientId: PAYDESTAL_PUBLIC_KEY,
-      environment: PAYDESTAL_MODE === 'production' ? 'live' : 'sandbox',
+      environment: (PAYDESTAL_MODE === 'production' || PAYDESTAL_MODE === 'live') ? 'live' : 'sandbox',
     });
   } catch (error) {
     logger.error('Failed to get Paydestal config', error.message);
