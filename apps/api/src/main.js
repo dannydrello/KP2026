@@ -48,13 +48,13 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve static files from the React build
-app.use(express.static(path.join(process.cwd(), 'dist', 'apps', 'web')));
+app.use(express.static(path.join(process.cwd(), 'dist')));
 
 app.use('/', routes());
 
 // Catch-all handler for React Router (must be after API routes)
 app.get('*', (req, res) => {
-	res.sendFile(path.join(process.cwd(), 'dist', 'apps', 'web', 'index.html'));
+	res.sendFile(path.join(process.cwd(), 'dist', 'index.html'));
 });
 
 app.use(errorMiddleware);
