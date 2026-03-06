@@ -66,7 +66,7 @@ app.use((req, res) => {
 const port = process.env.PORT || 3001;
 
 app.listen(port, () => {
-	logger.info(`🚀 API Server running on http://localhost:${port}`);
+	logger.info(`🚀 API Server running on port ${port}`);
 });
 
 export default app;
