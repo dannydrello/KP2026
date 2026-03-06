@@ -6,6 +6,7 @@
   "main": "src/main.js",
   "scripts": {
     "build": "cd ../web && vite build --outDir ../api/dist",
+    "postinstall": "npm run build",
     "start": "node src/main.js",
     "dev": "node src/main.js",
     "lint": "eslint . --quiet"
