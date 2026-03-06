@@ -1,0 +1,9 @@
+## Pages
+- [Untitled Page](/about): Learn about Kitchen Pastries
+- [Untitled Page](/cart): Review your selected pastries and proceed to checkout.
+- [Untitled Page](/gallery): Explore our gallery of custom cake creations, featuring elegant designs, colorful celebrations, and delicious treats.
+- [Untitled Page](/home): Discover handcrafted pastries, cakes, and baked goods made fresh daily with premium ingredients. Order online for delivery or pickup.
+- [Untitled Page](/menu): Browse our full menu of handcrafted pastries, cakes, bread, cookies, and custom orders. Fresh baked goods made daily with premium ingredients.
+- [Untitled Page](/order): Complete your order securely.
+- [Untitled Page](/paymentfailure): No description available
+- [Untitled Page](/paymentsuccess): No description available

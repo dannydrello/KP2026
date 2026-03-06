@@ -6,7 +6,7 @@ A full-stack e-commerce application for a bakery/pastry shop with integrated pay
 
 - **Frontend:** React + Vite + Tailwind CSS + shadcn/ui
 - **Backend:** Express.js + Node.js
-- **Database:** PocketBase (SQLite)
+- **Database:** MariaDB
 - **Payment:** Paydestal
 - **Notifications:** WhatsApp Business API (optional)
 

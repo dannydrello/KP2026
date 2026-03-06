@@ -30,8 +30,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# PocketBase - NEVER commit database files
-pb_data/
+# Database files - NEVER commit
 *.db
 *.db-shm
 *.db-wal

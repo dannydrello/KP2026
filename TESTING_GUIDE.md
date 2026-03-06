@@ -30,7 +30,7 @@ Configuration verified:
 ### Phase 2: Environment Setup
 - [ ] API server running
 - [ ] Frontend application running
-- [ ] PocketBase database running
+- [ ] MariaDB database running
 - [ ] HTTPS/SSL active
 
 ### Phase 3: Payment Flow Testing
@@ -79,10 +79,11 @@ npm install  # if not done yet
 npm run dev
 ```
 
-**Terminal 3 - PocketBase:**
+**Terminal 3 - MariaDB:**
 ```bash
-cd apps/pocketbase
-./pocketbase serve
+# Ensure MariaDB is running and the database is created
+# Run the SQL script to create tables:
+mysql -u root -p kp2026 < apps/api/create_tables.sql
 ```
 
 ### Step 2: Access Your Application

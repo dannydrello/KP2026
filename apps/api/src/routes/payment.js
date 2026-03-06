@@ -2,7 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import crypto from 'crypto';
 import logger from '../utils/logger.js';
-import pb from '../utils/pocketbase.js';
+import db from '../utils/mariadb.js';
 import { sendCustomerReceipt, sendKitchenNotification } from '../utils/whatsapp.js';
 
 const router = express.Router();
@@ -11,18 +11,21 @@ const PAYDESTAL_PUBLIC_KEY = process.env.PAYDESTAL_PUBLIC_KEY;
 const PAYDESTAL_SECRET_KEY = process.env.PAYDESTAL_SECRET_KEY;
 const PAYDESTAL_MODE = process.env.PAYDESTAL_MODE || 'sandbox';
 
-// Helper function to update transaction status in PocketBase
+// Helper function to update transaction status in MariaDB
 async function updateTransactionStatus(orderId, status, paymentId) {
+  let conn;
   try {
-    const transaction = await pb.collection('transactions').getFirstListItem(`orderId="${orderId}"`);
-    await pb.collection('transactions').update(transaction.id, {
-      status: status,
-      paydestal_reference: paymentId,
-    });
+    conn = await db.getConnection();
+    await conn.query(
+      'UPDATE transactions SET status = ?, paydestal_reference = ? WHERE orderId = ?',
+      [status, paymentId, orderId]
+    );
     logger.info('Transaction status updated', { orderId, status });
   } catch (error) {
     // Don't throw - webhook should still acknowledge receipt
     logger.warn('Failed to update transaction in database', { orderId, error: error.message });
+  } finally {
+    if (conn) conn.release();
   }
 }
 
@@ -61,28 +64,35 @@ router.post('/initiate', async (req, res) => {
     }
 
     try {
-      // Store order in PocketBase
-      const transaction = await pb.collection('transactions').create({
-        orderId,
-        status: 'pending',
-        amount: parseFloat(amount),
-        currency,
-        customerEmail,
-        customerName,
-        customerPhone: customerPhone || '',
-        street: street || '',
-        city: city || '',
-        country: country || 'NG',
-        orderItems: orderItems,
-        paydestal_reference: '',
-      });
+      // Store order in MariaDB
+      let conn = await db.getConnection();
+      const result = await conn.query(
+        `INSERT INTO transactions 
+         (orderId, status, amount, currency, customerEmail, customerName, customerPhone, street, city, country, orderItems, paydestal_reference) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          orderId,
+          'pending',
+          parseFloat(amount),
+          currency,
+          customerEmail,
+          customerName,
+          customerPhone || '',
+          street || '',
+          city || '',
+          country || 'NG',
+          JSON.stringify(orderItems),
+          ''
+        ]
+      );
+      conn.release();
 
-      logger.info('Order created in database', { orderId, transactionId: transaction.id });
+      logger.info('Order created in database', { orderId, transactionId: result.insertId });
 
       res.json({
         success: true,
         orderId,
-        transactionId: transaction.id,
+        transactionId: result.insertId,
       });
     } catch (dbError) {
       // Log error but don't fail - payment can still proceed
@@ -90,9 +100,7 @@ router.post('/initiate', async (req, res) => {
       logger.error('Failed to store order in database', { 
         orderId, 
         error: dbError.message,
-        status: dbError.status,
-        data: dbError.data,
-        hint: 'Make sure the "transactions" collection exists in PocketBase'
+        hint: 'Make sure the "transactions" table exists in MariaDB'
       });
 
       // Return success anyway so payment can proceed
@@ -122,7 +130,17 @@ router.get('/verify/:orderId', async (req, res) => {
     }
 
     try {
-      const transaction = await pb.collection('transactions').getFirstListItem(`orderId="${orderId}"`);
+      let conn = await db.getConnection();
+      const rows = await conn.query('SELECT * FROM transactions WHERE orderId = ?', [orderId]);
+      conn.release();
+
+      if (rows.length === 0) {
+        return res.status(404).json({
+          error: 'Order not found',
+        });
+      }
+
+      const transaction = rows[0];
 
       logger.info('Order status retrieved', { orderId, status: transaction.status });
 
@@ -134,7 +152,7 @@ router.get('/verify/:orderId', async (req, res) => {
         paydestal_reference: transaction.paydestal_reference,
       });
     } catch (error) {
-      if (error.status === 404) {
+      if (error.code === 'ER_NO_SUCH_TABLE') {
         return res.status(404).json({
           error: 'Order not found',
         });
@@ -171,19 +189,28 @@ router.post('/webhook', async (req, res) => {
         
         // Send WhatsApp receipts
         try {
-          const transaction = await pb.collection('transactions').getFirstListItem(`orderId="${data.order_id}"`);
+          let conn = await db.getConnection();
+          const rows = await conn.query('SELECT * FROM transactions WHERE orderId = ?', [data.order_id]);
+          conn.release();
+
+          if (rows.length === 0) {
+            logger.warn('Transaction not found for WhatsApp', { orderId: data.order_id });
+            return;
+          }
+
+          const transaction = rows[0];
           
           const orderData = {
             orderId: data.order_id,
             amount: data.amount / 100, // Convert from cents
             currency: 'NGN',
-            items: transaction.orderItems || []
+            items: JSON.parse(transaction.orderItems || '[]')
           };
           
           const customerData = {
             customerName: transaction.customerName,
             customerEmail: transaction.customerEmail,
-            phone: transaction.phone || '',
+            phone: transaction.customerPhone || '',
             street: transaction.street || '',
             city: transaction.city || ''
           };
