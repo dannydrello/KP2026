@@ -4,6 +4,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import path from 'node:path';
 
 import routes from './routes/index.js';
 import { errorMiddleware } from './middleware/index.js';
@@ -46,7 +47,15 @@ app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Serve static files from the React build
+app.use(express.static(path.join(process.cwd(), 'dist', 'apps', 'web')));
+
 app.use('/', routes());
+
+// Catch-all handler for React Router (must be after API routes)
+app.get('*', (req, res) => {
+	res.sendFile(path.join(process.cwd(), 'dist', 'apps', 'web', 'index.html'));
+});
 
 app.use(errorMiddleware);
 
