@@ -47,15 +47,15 @@ app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static files from the React build
-app.use(express.static(path.join(process.cwd(), 'apps/api/dist')));
+// Serve static files from the React build (only in combined deployment)
+if (process.env.COMBINED_DEPLOYMENT === 'true') {
+	app.use(express.static(path.join(process.cwd(), 'apps/api/dist')));
 
-app.use('/', routes());
-
-// Catch-all handler for React Router (must be after API routes)
-app.get('*', (req, res) => {
-	res.sendFile(path.join(process.cwd(), 'apps/api/dist/index.html'));
-});
+	// Catch-all handler for React Router (must be after API routes)
+	app.get('*', (req, res) => {
+		res.sendFile(path.join(process.cwd(), 'apps/api/dist/index.html'));
+	});
+}
 
 app.use(errorMiddleware);
 
