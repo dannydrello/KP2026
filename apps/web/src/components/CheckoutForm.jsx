@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { useCart } from '@/components/CartContext.jsx';
+import { apiServerClient } from '@/lib/apiServerClient';
 
 const CheckoutForm = () => {
   const { toast } = useToast();
@@ -21,7 +22,7 @@ const CheckoutForm = () => {
     // Fetch Paydestal config from API
     const loadConfig = async () => {
       try {
-        const response = await fetch('http://localhost:3001/payment/config');
+        const response = await apiServerClient.fetch('/payment/config');
         if (response.ok) {
           const config = await response.json();
           setPaydestalConfig(config);
@@ -151,7 +152,7 @@ const CheckoutForm = () => {
     const createOrder = async (retries = 3) => {
       for (let i = 0; i < retries; i++) {
         try {
-          const response = await fetch('http://localhost:3001/payment/initiate', {
+          const response = await apiServerClient.fetch('/payment/initiate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(orderData)

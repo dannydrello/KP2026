@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import Header from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
 import { usePayment } from '@/contexts/PaymentContext.jsx';
+import { apiServerClient } from '@/lib/apiServerClient';
 
 const PaymentSuccessPage = () => {
   const [searchParams] = useSearchParams();
@@ -28,7 +29,7 @@ const PaymentSuccessPage = () => {
       
       for (const order of unsyncedOrders) {
         try {
-          const response = await fetch('http://localhost:3001/payment/initiate', {
+          const response = await apiServerClient.fetch('/payment/initiate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(order)
