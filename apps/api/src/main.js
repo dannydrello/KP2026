@@ -47,6 +47,8 @@ app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use(routes());
+
 // Serve static files from the React build (only in combined deployment)
 if (process.env.COMBINED_DEPLOYMENT === 'true') {
 	app.use(express.static(path.join(process.cwd(), 'apps/api/dist')));
