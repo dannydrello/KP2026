@@ -65,10 +65,13 @@ app.use((req, res) => {
 	res.status(404).json({ error: 'Route not found' });
 });
 
-const port = process.env.PORT || 3001;
-
-app.listen(port, () => {
-	logger.info(`🚀 API Server running on port ${port}`);
-});
-
+// Export for Vercel serverless
 export default app;
+
+// For local development only
+if (process.env.NODE_ENV !== 'production') {
+  const port = process.env.PORT || 3001;
+  app.listen(port, () => {
+    logger.info(`🚀 API Server running locally on port ${port}`);
+  });
+}
