@@ -27,10 +27,6 @@ A full-stack e-commerce application for a bakery/pastry shop with integrated pay
 │   │   │   │   └── payment.js
 │   │   │   └── main.js
 │   │   └── package.json
-│   │
-│   └── pocketbase/       # PocketBase database
-│       ├── pb_data/      # Database files (gitignored)
-│       └── pocketbase    # Binary executable
 │
 └── package.json          # Root workspace config
 ```
@@ -69,28 +65,19 @@ PAYDESTAL_PUBLIC_KEY=your_public_key_here
 PAYDESTAL_SECRET_KEY=your_secret_key_here
 PAYDESTAL_MODE=sandbox  # Use 'sandbox' for testing, 'production' for live
 
-# PocketBase Database
-POCKETBASE_URL=http://localhost:8090
-
 # Optional: WhatsApp Notifications
 WHATSAPP_INTEGRATION_ENABLED=false
 ```
 
 ### 3. Start Services
 
-**Terminal 1 - PocketBase (Database):**
-```bash
-cd apps/pocketbase
-./pocketbase serve --http=0.0.0.0:8090
-```
-
-**Terminal 2 - API Server:**
+**Terminal 1 - API Server:**
 ```bash
 cd apps/api
 npm run dev
 ```
 
-**Terminal 3 - Web App:**
+**Terminal 2 - Web App:**
 ```bash
 cd apps/web
 npm run dev
@@ -100,7 +87,6 @@ npm run dev
 
 - Web: http://localhost:3000
 - API: http://localhost:3001
-- PocketBase Admin: http://localhost:8090/_/
 
 ## Payment Integration
 

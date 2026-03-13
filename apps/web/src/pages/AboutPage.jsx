@@ -178,7 +178,7 @@ A cupcake is not just a treat; it is a small burst of happiness.</p>
             }} transition={{
               duration: 0.8
             }} className="order-1 lg:order-2">
-                <img src="/hero.jpg" alt="Baker carefully preparing fresh pastries in professional kitchen" className="rounded-xl shadow-soft-xl w-full h-[500px] object-cover" />
+                <img src="/back4.jpg" alt="Baker carefully preparing fresh pastries in professional kitchen" className="rounded-xl shadow-soft-xl w-full h-[500px] object-cover" />
               </motion.div>
             </div>
           </div>

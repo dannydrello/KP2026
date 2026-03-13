@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { Link } from 'react-router-dom';
@@ -19,15 +18,19 @@ const HomePage = () => {
   const { addToCart } = useCart();
   const { toast } = useToast();
 
+  // Auto-rotate testimonials every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTestimonial((prev) => (prev + 1) % newTestimonials.length);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth >= 1024) {
-        setItemsPerView(3);
-      } else if (window.innerWidth >= 768) {
-        setItemsPerView(2);
-      } else {
-        setItemsPerView(1);
-      }
+      // Always show 1 testimonial at a time for better carousel experience
+      setItemsPerView(1);
     };
 
     handleResize();
@@ -38,33 +41,33 @@ const HomePage = () => {
   const featuredProducts = [
     {
       id: 1,
-      name: 'Triple delight Bento cake',
+      name: '8 INCH CAKE',
       description: 'Buttery, flaky layers of perfection',
       price: '₦15000.00',
-      image: '/menu/Triple delight Bento cake.png',
+      image: '/menu/8inchcake.jpg',
       category: 'Cakes'
     },
     {
       id: 2,
       name: 'CRISPY CHICKEN BURGER',
       description: 'Crispy chicken with fresh vegetables and special sauce',
-      price: '₦5000.00',
+      price: '₦6615',
       image: '/menu/CRISPY_CHICKEN_BURGER.png',
       category: 'Snack'
     },
     {
       id: 3,
-      name: 'CLUB CROISSANT',
-      description: 'Sweet, soft, and irresistible',
+      name: 'MILKSHAKE',
+      description: 'Rich, creamy, and perfectly blended',
       price: '₦5000.00',
-      image: '/menu/CLUB_CROISSANT.png',
-      category: 'Pastries & Tarts'
+      image: '/menu/milkshake.jpg',
+      category: 'drinks'
     },
     {
       id: 4,
       name: 'SCOTCHED EGG',
       description: 'Light, fluffy, and beautifully decorated',
-      price: '₦5000.00',
+      price: '₦2100.00',
       image: '/menu/SCOTCHED_EGG.png',
       category: 'Snack'
     }
@@ -73,30 +76,30 @@ const HomePage = () => {
   const newTestimonials = [
     {
       id: 1,
-      name: 'MR. DIKE',
-      role: 'CEO Ditech Solutions',
-      text: "I ordered a custom cake for our company anniversary, and it was a hit! The branding was on point, the flavor was rich, and the delivery was right on time. Highly recommend!",
+      name: 'Jennifer Okutalukwe',
+      role: 'Local guide',
+      text: "Whenever I give reviews, I like to speak only from my own experience. On this visit, the people I came with had negative feedback about the pastries and service.My experience was a bit different, I really enjoyed the vanilla milkshake (Friend A & B said it had a bad after taste and was 'stale') and the Oreo loaf cake (which I loved) although the New York cookie wasn't for me at all.Friend A tried the slushy drink but felt it tasted mostly like sugar and ice.Later we then asked for loaded fries (I dunno if the staff at the counter didn't understand what we asked for because she said in her words 'you'll have to place the order from the bakery then they'll deliver it here and it'll take 2 days to make or more it depends on how busy the bakers are, it might even take 2 weeks) for loaded fries?????? That was crazy…😂😂Overall, my personal experience was great. I accidentally left my purse on the table, and when I came back, it was still right there, untouched. That really says a lot about the environment and staff.",
       avatar: '/gallery/gallery-image-5.jpg'
     },
     {
       id: 2,
-      name: 'IJEOMA N.',
-      role: 'Manager',
-      text: "Best cakes in Enugu, hands down! I've ordered three times and they've never disappointed. The cakes are always fresh, soft, and so tasty. You can tell they use high-quality ingredients.",
+      name: 'Yvette Joseph',
+      role: 'Local guide',
+      text: "Love love love the pastries here. Dare I say, one of the best pastry shops in enugu.There's something there for everyone; foodies, those with sweet tooth, health enthusiasts etc. Their chicken salad is always so fresh and tastes healthy. And they make one of the meanest muffins I've ever tasted. The dining area is quite small, so I'd recommend a takeout. Otherwise, a 10/10 food experience",
       avatar: '/gallery/gallery-image-6.jpg'
     },
     {
       id: 3,
-      name: 'CHIOMA O.',
+      name: 'Vendula Izundu',
       role: 'Event Planner',
-      text: "Kitchen Pastries Ltd made my wedding reception unforgettable. The custom designs were stunning, and every guest raved about the taste. Professional and reliable!",
+      text: "Best place in town. Cakes have no competition and the snacks are simply too good to resist. Customer service perfect. This talented and hardworking woman and her staff are doing wonderful job and if you don't believe me, just go and see. But if you can't go like me, simply order. God has done great things in this place! 🙏 Well done to all who work there! ⭐️",
       avatar: '/gallery/gallery-image-7.jpg'
     },
     {
       id: 4,
-      name: 'EMEKA C.',
+      name: 'Obianuju Ayalogu',
       role: 'Business Owner',
-      text: "We've been ordering cakes for our office events for 6 months now. Consistent quality, beautiful presentation, and always delivered on time. Highly satisfied!",
+      text: "I went there at night and it looked nice. We sat upstairs and I unfortunately don't have pictures of the place. The food was good but unfortunately, I didn't get a receipt and they made a mistake when billing me. Definitely would try to eat there again",
       avatar: '/gallery/gallery-image-8.jpg'
     }
   ];
@@ -144,7 +147,7 @@ const HomePage = () => {
           {/* Background Image with Overlay */}
           <div className="absolute inset-0 z-0">
             <img
-              src="/hero4.jpg"
+              src="/back2.jpg"
               alt="Freshly baked pastries display"
               className="w-full h-full object-cover"
             />
@@ -177,6 +180,47 @@ const HomePage = () => {
                     View Menu
                   </Button>
                 </Link>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+
+        {/* Mother's Day Special Offer */}
+        <section className="py-12 bg-gradient-to-r from-pink-50 to-purple-50">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="max-w-4xl mx-auto text-center"
+            >
+              <div className="bg-white rounded-2xl shadow-soft-lg p-8 md:p-12 border border-pink-100">
+                <div className="mb-6">
+                  <span className="inline-block bg-pink-100 text-pink-800 px-4 py-2 rounded-full text-sm font-semibold mb-4">
+                    🌸 Special Mother's Day Offer 🌸
+                  </span>
+                  <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                    Celebrate Mom with Our Special Treats!
+                  </h2>
+                  <p className="text-lg text-gray-600 mb-6 max-w-2xl mx-auto">
+                    This Mother's Day, surprise your mom with our handcrafted specials.
+                    Enjoy exclusive discounts on our premium breakfast trays, pastry boxes, and gourmet cakes - perfect for showing her how much she means to you.
+                  </p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Link to="/menu" state={{ section: 'specials' }}>
+                    <Button size="lg" className="bg-pink-600 hover:bg-pink-700 text-white px-8 py-6 text-lg shadow-soft-lg hover:shadow-soft-xl transition-smooth hover:scale-105">
+                      <ShoppingCart className="mr-2 w-5 h-5" />
+                      Order Specials Now
+                    </Button>
+                  </Link>
+                  <Link to="/menu" state={{ section: 'gourmetCakes' }}>
+                    <Button size="lg" variant="outline" className="border-pink-300 text-pink-700 hover:bg-pink-50 px-8 py-6 text-lg shadow-soft-lg hover:shadow-soft-xl transition-smooth hover:scale-105">
+                      View Gourmet Cakes
+                    </Button>
+                  </Link>
+                </div>
               </div>
             </motion.div>
           </div>
@@ -225,10 +269,10 @@ const HomePage = () => {
                     <CardContent className="p-6 flex-1 flex flex-col">
                       <h3 className="text-xl font-bold text-foreground group-hover:text-gray-900 mb-2 transition-colors">{product.name}</h3>
                       <p className="text-sm text-muted-foreground group-hover:text-gray-800 mb-4 flex-1 transition-colors">{product.description}</p>
-                      
+
                       <div className="flex flex-col gap-4 mt-auto">
                         <span className="text-2xl font-bold text-primary group-hover:text-gray-900 transition-colors">{product.price}</span>
-                        
+
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center border border-border rounded-lg overflow-hidden bg-background/80 backdrop-blur-sm">
                             <button
@@ -247,8 +291,8 @@ const HomePage = () => {
                               <Plus className="w-4 h-4" />
                             </button>
                           </div>
-                          
-                          <Button 
+
+                          <Button
                             onClick={() => handleAddToCart(product)}
                             className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground shadow-soft transition-smooth"
                           >
@@ -280,8 +324,8 @@ const HomePage = () => {
         <section className="py-20 bg-[#FFF8F0] overflow-hidden">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             {/* Header & Controls */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-6">
-              <motion.div 
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 md:mb-12 gap-4 md:gap-6">
+              <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
@@ -290,67 +334,78 @@ const HomePage = () => {
                 <span className="text-yellow-500 font-bold tracking-wider uppercase text-sm mb-2 block">
                   Testimonials
                 </span>
-                <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
+                <h2 className="text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-gray-900 mb-3 md:mb-4">
                   What our customers say about us
                 </h2>
-                <p className="text-gray-600 text-lg">
+                <p className="text-gray-600 text-base md:text-lg">
                   Discover why Kitchen Pastries Ltd is the preferred choice for delicious cakes, pastries, and unforgettable event catering experiences.
                 </p>
               </motion.div>
-              
-              <div className="flex gap-3 shrink-0">
+
+              <div className="flex gap-3 shrink-0 self-center md:self-end">
                 <Button
                   onClick={prevTestimonial}
                   disabled={currentTestimonial === 0}
                   variant="outline"
                   size="icon"
-                  className="rounded-full w-12 h-12 border-gray-200 bg-white hover:bg-white hover:text-yellow-500 hover:border-yellow-500 shadow-sm transition-all disabled:opacity-50 disabled:hover:border-gray-200 disabled:hover:text-gray-900"
+                  className="rounded-full w-10 h-10 md:w-12 md:h-12 border-gray-200 bg-white hover:bg-white hover:text-yellow-500 hover:border-yellow-500 shadow-sm transition-all disabled:opacity-50 disabled:hover:border-gray-200 disabled:hover:text-gray-900"
                 >
-                  <ChevronLeft className="w-6 h-6" />
+                  <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
                 </Button>
                 <Button
                   onClick={nextTestimonial}
                   disabled={currentTestimonial >= maxIndex}
                   variant="outline"
                   size="icon"
-                  className="rounded-full w-12 h-12 border-gray-200 bg-white hover:bg-white hover:text-yellow-500 hover:border-yellow-500 shadow-sm transition-all disabled:opacity-50 disabled:hover:border-gray-200 disabled:hover:text-gray-900"
+                  className="rounded-full w-10 h-10 md:w-12 md:h-12 border-gray-200 bg-white hover:bg-white hover:text-yellow-500 hover:border-yellow-500 shadow-sm transition-all disabled:opacity-50 disabled:hover:border-gray-200 disabled:hover:text-gray-900"
                 >
-                  <ChevronRight className="w-6 h-6" />
+                  <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
                 </Button>
               </div>
             </div>
 
             {/* Carousel */}
-            <div className="relative mb-16">
-              <motion.div 
-                className="flex gap-6"
-                animate={{ x: `calc(-${currentTestimonial * (100 / itemsPerView)}% - ${currentTestimonial * (24 / itemsPerView)}px)` }}
+            <div className="relative mb-8 md:mb-16 overflow-hidden">
+              <motion.div
+                className="flex"
+                animate={{ x: `-${currentTestimonial * 100}%` }}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.1}
+                onDragEnd={(event, info) => {
+                  const swipeThreshold = 50;
+                  if (info.offset.x > swipeThreshold && currentTestimonial > 0) {
+                    prevTestimonial();
+                  } else if (info.offset.x < -swipeThreshold && currentTestimonial < maxIndex) {
+                    nextTestimonial();
+                  }
+                }}
               >
                 {newTestimonials.map((testimonial) => (
-                  <div 
-                    key={testimonial.id} 
-                    className="min-w-full md:min-w-[calc(50%-12px)] lg:min-w-[calc(33.333%-16px)] shrink-0"
+                  <div
+                    key={testimonial.id}
+                    className="min-w-full shrink-0 px-2 md:px-0"
                   >
-                    <Card className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 h-full border-none">
-                      <CardContent className="p-8 flex flex-col h-full">
-                        <div className="flex items-center gap-4 mb-6">
-                          <img 
-                            src={testimonial.avatar} 
-                            alt={testimonial.name} 
-                            className="w-16 h-16 rounded-full object-cover border-2 border-gray-100"
+                    <Card className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 h-full border-none max-w-4xl mx-auto">
+                      <CardContent className="p-4 md:p-6 lg:p-8 flex flex-col h-full">
+                        <div className="flex items-center gap-3 md:gap-4 mb-4 md:mb-6">
+                          <img
+                            src={testimonial.avatar}
+                            alt={testimonial.name}
+                            className="w-12 h-12 md:w-16 md:h-16 rounded-full object-cover border-2 border-gray-100 flex-shrink-0"
                           />
-                          <div>
-                            <h4 className="font-bold text-gray-900 text-lg">{testimonial.name}</h4>
-                            <p className="text-gray-500 text-sm">{testimonial.role}</p>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-bold text-gray-900 text-base md:text-lg truncate">{testimonial.name}</h4>
+                            <p className="text-gray-500 text-xs md:text-sm truncate">{testimonial.role}</p>
                           </div>
                         </div>
-                        <div className="flex mb-4">
+                        <div className="flex mb-3 md:mb-4 justify-center">
                           {[...Array(5)].map((_, i) => (
-                            <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                            <Star key={i} className="w-4 h-4 md:w-5 md:h-5 fill-yellow-400 text-yellow-400" />
                           ))}
                         </div>
-                        <p className="text-gray-600 italic leading-relaxed flex-1">
+                        <p className="text-gray-600 italic leading-relaxed flex-1 text-center text-sm md:text-base lg:text-lg">
                           "{testimonial.text}"
                         </p>
                       </CardContent>
@@ -361,13 +416,15 @@ const HomePage = () => {
             </div>
 
             {/* Indicator Dots */}
-            <div className="flex justify-center gap-2 mb-16">
+            <div className="flex justify-center gap-2 mb-8 md:mb-16">
               {[...Array(maxIndex + 1)].map((_, index) => (
                 <button
                   key={index}
                   onClick={() => setCurrentTestimonial(index)}
-                  className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                    index === currentTestimonial ? 'bg-yellow-500 w-8' : 'bg-gray-300 hover:bg-gray-400'
+                  className={`rounded-full transition-all duration-300 touch-manipulation ${
+                    index === currentTestimonial
+                      ? 'bg-yellow-500 w-6 h-3 md:w-8 md:h-3'
+                      : 'bg-gray-300 hover:bg-gray-400 w-3 h-3'
                   }`}
                   aria-label={`Go to slide ${index + 1}`}
                 />
@@ -376,7 +433,7 @@ const HomePage = () => {
 
             {/* Stats Section */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 border-t border-gray-200/60 pt-12">
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -385,7 +442,7 @@ const HomePage = () => {
                 <h3 className="text-4xl md:text-5xl font-bold text-[#10b981] mb-2">15k+</h3>
                 <p className="text-gray-600 font-medium text-lg">Happy Customers</p>
               </motion.div>
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -395,7 +452,7 @@ const HomePage = () => {
                 <h3 className="text-4xl md:text-5xl font-bold text-[#10b981] mb-2">107+</h3>
                 <p className="text-gray-600 font-medium text-lg">Cakes Made</p>
               </motion.div>
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}

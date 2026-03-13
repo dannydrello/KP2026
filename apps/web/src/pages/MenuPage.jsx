@@ -1,206 +1,151 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
 import { ShoppingCart, Plus, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import Header from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
 import { useCart } from '@/components/CartContext.jsx';
 import { useToast } from '@/hooks/use-toast';
+import { useLocation } from 'react-router-dom';
 
 const MenuPage = () => {
+  const location = useLocation();
+  const [activeSection, setActiveSection] = useState('cafe');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [quantities, setQuantities] = useState({});
+  const [selectedFlavors, setSelectedFlavors] = useState({});
   const { addToCart } = useCart();
   const { toast } = useToast();
 
-  const products = [
-    // Existing 12 products
-    {
-      id: 1,
-      name: 'Cheesecake slice',
-      category: 'Cake',
-      price: '₦6000',
-      description: 'Buttery, flaky layers of perfection baked fresh every morning',
-      image: '/menu/CHEESECAKE_SLICE.png'
+  // master menu organized into three primary sections
+  const menuSections = {
+    cafe: {
+      title: 'CAFE',
+      products: [
+        { id: 1, name: 'Cheesecake slice', category: 'cakes', price: '₦6000', description: 'Buttery, flaky layers of perfection baked fresh every morning', image: '/menu/CHEESECAKE_SLICE.png' },
+        { id: 2, name: 'iced cake slice', category: 'cakes', price: '₦3675', description: 'Rich, moist iced cake', image: '/menu/icecakeslice.jpg' },
+        { id: 3, name: 'Hotdog waffle', category: 'pastries', price: '₦1260', description: 'Soft, fluffy waffles with a savory twist', image: '/menu/HOTDOGWAFFLE.jpg' },
+        { id: 4, name: 'Childrens pastry party bag', category: 'pastries', price: '₦2000', description: '2 Ghana buns , 1 hotdog waffle and party Meatpie', image: '/menu/pastrybag.jpg' },
+        { id: 7, name: 'White Chocolate Oat Cookie', category: 'cookies', price: '₦4147.50', description: 'Dozen of chewy cookies loaded with premium chocolate chips', image: '/menu/WHITECHOCOLATEOATCOOKIE.jpg' },
+        { id: 8, name: 'Plain waffles', category: 'snacks', price: '₦2625', description: 'Soft, buttery waffles', image: '/menu/waffles.jpg' },
+        { id: 10, name: 'Yougurt', category: 'drinks', price: '₦2625', description: 'Greek yogurt parfait', image: '/menu/yogurt.jpg', flavors: ['Vanilla', 'Strawberry', 'Banana'] },
+        // additional cafe items previously listed further down
+        { id: 11, name: 'Sandwitch', category: 'snacks', price: '₦2625', description: 'Sandwitch', image: '/menu/CHICKENSANDWITCH.jpg' },
+        { id: 12, name: 'Milkshake', category: 'drinks', price: '₦4095', description: 'Chill sweet and healthy Milkshake', image: '/menu/milkshake.jpg' },
+        { id: 9, name: 'Gelato small', category: 'drinks', price: '₦5145', description: 'Chill sweet and healthy Milkshake', image: '/menu/gelato.jpg' },
+        { id: 13, name: 'Bannana Loaf', category: 'bread & rolls', price: '₦5775', description: 'Super-moist, homemade banana bread packed with ripe bananas and warm spices. A comforting, timeless treat perfect with coffee.', image: '/menu/banannaloaf.jpg' },
+        { id: 14, name: 'Ice cream cake', category: 'cakes', price: '₦5250', description: 'Delicious ice cream cake', image: '/menu/Brownie cup.png' },
+        { id: 16, name: 'chocolate waffles', category: 'snacks', price: '₦3360', description: 'Pack of soft, chocolate waffles', image: '/menu/waffles.jpg' },
+        { id: 17, name: 'Milky Bread', category: 'bread & rolls', price: '₦2100', description: 'Soft milky bread', image: '/menu/milkbread.jpeg' },
+        { id: 18, name: 'Bread rolls', category: 'bread & rolls', price: '₦1365', description: 'Sweet bread rolls', image: '/menu/breadrolls.jpeg' },
+        { id: 19, name: 'Potato chips', category: 'snacks', price: '₦4147.50', description: 'Crispy potato chips', image: '/menu/potatocrips.jpg' },
+        { id: 20, name: '3 Plantain Chips tub', category: 'snacks', price: '₦9450', description: 'Crispy plantain chips', image: '/menu/midiplantaincrips.jpg' },
+        { id: 21, name: 'Fruit cake slice', category: 'cakes', price: '₦5250', description: 'Delicious fruit cake slice', image: '/menu/fruitcakeslice.jpeg' },
+        { id: 72, name: 'Fruit cake midi', category: 'cakes', price: '₦7350', description: 'Delicious fruit cake', image: '/menu/fruitcake2.jpg' },
+        { id: 73, name: 'Fruit cake large', category: 'cakes', price: '₦23100', description: 'Delicious fruit cake', image: '/menu/fruitcakelarge.jpeg' },  
+        { id: 28, name: 'Gelato Big', category: 'drinks', price: '₦7350', description: 'Big Gelato', image: '/menu/gelato.jpg' },
+        { id: 29, name: '3 Midi cake in a cup', category: 'cakes', price: '₦4725', description: 'Delicious midi cake in a cup', image: '/menu/cakeinacup.jpeg' },
+        { id: 31, name: 'Chin Chin painter', category: 'snacks', price: '₦22050', description: 'Crispy fried snack, painter', image: '/menu/CHINCHIN_PAINTER.png' },
+        { id: 74, name: 'Chin Chin pack', category: 'snacks', price: '₦9345', description: 'Crispy fried snack, pack', image: '/menu/Large_Chinchin.png' },
+        { id: 32, name: 'Plain doughnut', category: 'snacks', price: '₦787.50', description: 'creamy puffs', image: '/menu/Milky_donut.png' },
+        { id: 33, name: 'Meatpie', category: 'snacks', price: '₦2572.50', description: 'mini sausage pot', image: '/menu/meatpie.jpg' },
+        { id: 34, name: 'Milky doughnut', category: 'snacks', price: '₦1890', description: 'Very nice fishroll', image: '/menu/Milky_donut.png' },
+        { id: 35, name: 'Nutella filled doughnut', category: 'snacks', price: '₦1050', description: 'Sweet sugar doughnut', image: '/menu/Nutella_filled_Donut.png' },       
+        { id: 37, name: 'Fresh cold pressed juice', category: 'drinks', price: '₦3885', description: 'fresh cold juice', image: '/menu/freshjuice.jpg' },
+        { id: 38, name: 'Crispy chicken burger', category: 'snacks', price: '₦6615', description: 'Crispy chicken burger', image: '/menu/CRISPY_CHICKEN_BURGER.png' },
+        { id: 23, name: 'Cake loaf', category: 'cakes', price: '₦3570', description: 'Delicious cake loaf', image: '/menu/cakeloaf.jpeg', flavors: ['Chocolate', 'Vanilla', 'Red Velvet', 'Cookies N Creme', 'Strawberry', 'Malted Milk'] },
+       
+        { id: 40, name: 'Sugar coated Donny pots', category: 'donuts', price: '₦1000', description: 'Sugar coated Donny pots', image: '/menu/Sugar_coated_Donny_pots.png' },
+        { id: 41, name: 'Peppered chicken', category: 'snacks', price: '₦3937.50', description: 'Spicy peppered chicken', image: '/menu/PEPPEREDCHICKEN_MAXI.png' },
+        { id: 42, name: 'Sausage wraps', category: 'snacks', price: '₦1260', description: 'Sausage wraps', image: '/menu/sausagewraps.jpg' },
+        { id: 43, name: 'Croissant', category: 'snacks', price: '₦3675', description: 'Delicious croissant', image: '/menu/croissant.jpg' },
+        { id: 44, name: 'Scotch Egg', category: 'snacks', price: '₦2100', description: 'Melt-in-mouth scotch egg', image: '/menu/SCOTCHED_EGG.png' },
+        { id: 45, name: 'Milky popcorn', category: 'snacks', price: '₦1995', description: 'Sweetened/salted sweetened', image: '/menu/popcorn.jpg' },
+        { id: 47, name: 'Egg roll', category: 'snacks', price: '₦787.50', description: 'Delicious egg roll', image: '/menu/eggroll.jpg' },
+        { id: 48, name: 'Cookies', category: 'cookies', price: '₦4095', description: 'Fresh baked cookies', image: '/menu/cookies.jpeg', flavors: ['Classic', 'NY Style', 'Red Velvet'] },
+        { id: 15, name: 'Butter cookies', category: 'cookies', price: '₦1155', description: 'cookies', image: '/menu/buttercookies.jpg' },
+        { id: 49, name: 'Cake in a cup', category: 'cakes', price: '₦5250', description: 'Delicious cake in a cup', image: '/menu/cakeinacup.jpeg', flavors: ['Vanilla', 'Red Velvet', 'Chocolate', 'Malted Milk'] },
+        { id: 50, name: 'Ice 2 in 1 cupcake', category: 'cakes', price: '₦2362.50', description: 'delicious ice cupcake', image: '/menu/SINGLEICEDCUPCAKES.jpg' },      
+        { id: 52, name: 'Low sugar carrot Loaf', category: 'cakes', price: '₦5825.50', description: 'Low sugar carrot cake', image: '/menu/carrotcake.jpg' },
+        { id: 53, name: 'Granola', category: 'snacks', price: '₦7350', description: 'Crunchy and healthy granola', image: '/menu/granola.jpg' },    
+        { id: 55, name: 'Puff pot', category: 'snacks', price: '₦1785', description: 'Creamy puff pot', image: '/menu/puffpots.jpg' },
+        { id: 22, name: 'Ghana buns', category: 'snacks', price: '₦1050', description: 'Delicious Ghana buns', image: '/menu/GHANA_BUNS.png' },
+        { id: 56, name: '6" cake', category: 'cakes', price: '₦7245', description: 'Decadent cake', image: '/menu/8inchcake.jpg' },      
+        { id: 58, name: '8" cake', category: 'cakes', price: '₦24525', description: 'Classic cake', image: '/menu/8inchcake.jpg' },
+        { id: 59, name: 'Muffins', category: 'snacks', price: '₦3150', description: 'Fresh baked muffins', image: '/menu/muffins.jpeg', flavors: ['Chocolate', 'Oreos', 'Plain'] },
+        { id: 60, name: '10" Cake', category: 'cakes', price: '₦29400', description: '10 inches Cake', image: '/menu/10inchcake.jpg' },
+        { id: 61, name: 'Fishroll', category: 'snacks', price: '₦1260', description: 'Delicious fishroll', image: '/menu/FISHROLL.png' },
+        { id: 62, name: 'Brownies', category: 'snacks', price: '₦4179', description: 'Decadent brownies', image: '/menu/brownies.jpg' },
+        { id: 63, name: 'Bento cake', category: 'cakes', price: '₦6300', description: 'Bento cake', image: '/menu/bentocake.jpg' },
+        { id: 64, name: 'Jumbo cake', category: 'cakes', price: '₦1785', description: 'Large jumbo cake', image: '/menu/JUMBOCUPCAKE.jpg', flavors: ['Chocolate', 'Vanilla', 'Red Velvet', 'Cookies N Creme', 'Strawberry', 'Malted Milk'] },
+        { id: 65, name: '4 in 1 cupcake', category: 'cakes', price: '₦2625', description: 'Box of cupcake', image: '/menu/nakedcupcakes.jpg' },
+        { id: 66, name: 'Cake slice box', category: 'cakes', price: '₦3675', description: 'Box of cake slices', image: '/menu/cakesliceinabox.jpg' },
+        { id: 75, name: 'Plantain loaf', category: 'snacks', price: '₦5827.50', description: 'Moist and delicious plantain loaf', image: '/menu/plantaincake.jpg' },
+        
+        { id: 67, name: 'Chicken Salad', category: 'salad', price: '₦5775', description: 'Fresh and healthy salad', image: '/menu/chickensalad.jpg' },
+       
+        { id: 69, name: 'Tripple delight cake', category: 'cakes', price: '₦2940', description: 'Decadent triple-layer cake', image: '/menu/tripledelight.jpg' },
+        { id: 77, name: 'Coconut Bread', category: 'bread & rolls', price: '₦1543.50', description: 'Delicious coconut bread', image: '/menu/coconutbread.jpeg' },    
+        { id: 79, name: 'Chrispy chicken burger (small)', category: 'bread & rolls', price: '₦3675', description: 'Delicious sardine bread', image: '/menu/CRISPY_CHICKEN_BURGER.png' },
+        { id: 80, name: 'Parfait small', category: 'snacks', price: '₦5145', description: 'Delicious sardine bread', image: '/menu/GREEK_YOGURT_PARFAIT.png' },
+        { id: 81, name: 'Parfait Medium', category: 'snacks', price: '₦6300', description: 'Delicious sardine bread', image: '/menu/GREEK_YOGURT_PARFAIT.png' },
+        { id: 82, name: 'Parfait Large', category: 'snacks', price: '₦8085', description: 'Delicious sardine bread', image: '/menu/GREEK_YOGURT_PARFAIT.png' },
+        { id: 83, name: 'Sardine Bread', category: 'bread & rolls', price: '₦1543.50', description: 'Delicious sardine bread', image: '/menu/sardinebread.jpeg' },
+        { id: 84, name: 'Samosa (3)', category: 'snacks', price: '₦2467.50', description: 'Delicious samosa', image: '/menu/Pot of samosas.png' },
+        { id: 85, name: 'Spring rolls (3)', category: 'pastries & tarts', price: '₦1890', description: 'Delicious spring rolls', image: '/menu/BOX_OF_SPRINGROLLS.png' },
+        { id: 86, name: 'Pizza midi', category: 'pizzas', price: '₦12,495', description: 'Delicious pizza', image: '/menu/pizza.jpeg' },
+        { id: 87, name: 'Pizza large', category: 'pizzas', price: '₦17,640', description: 'Delicious pizza', image: '/menu/pizza.jpeg' },
+        { id: 88, name: 'Scones', category: 'snacks', price: '₦945', description: 'Delicious scones', image: '/menu/scones.jpg' },
+        { id: 89, name: 'Wheat Bread', category: 'bread & rolls', price: '₦3885', description: 'Delicious wheat bread', image: '/menu/wheatbread.jpg' },
+      ]
     },
-    {
-      id: 2,
-      name: 'Single Iced cupcakes',
-      category: 'Cakes',
-      price: '₦1900',
-      description: 'Rich, moist iced cake',
-      image: '/menu/SINGLEICEDCUPCAKES.jpg'
+    gourmetCakes: {
+      title: 'GOURMET CAKES',
+      products: [
+        { id: 5, name: 'Cake mail; MR TEMPTATION', category: 'cakes', price: '₦9850', description: 'Handcrafted gourmet cake', image: '/menu/CAKEMAILMRTEMPTATION.jpg', flavors: ['Carrot', 'Marble', 'Plantain'] },
+        { id: 6, name: 'Cake mail; MR ORIGINAL', category: 'cakes', price: '₦9850', description: 'Signature gourmet cake', image: '/menu/CAKEMAILMRORIGINAL.jpg', flavors: ['Vanilla', 'Red Velvet', 'Chocolate'] },
+      ]
     },
-    {
-      id: 3,
-      name: 'Hotdog waffle',
-      category: 'Pastry',
-      price: '₦750',
-      description: 'Sweet, soft donuts with a perfect glaze, made fresh daily',
-      image: '/menu/HOTDOGWAFFLE.jpg'
-    },
-    {
-      id: 4,
-      name: 'Childrens pastry party bag',
-      category: 'Pastry',
-      price: '₦2000',
-      description: '2 Ghana buns , 1 hotdog waffle and party Meatpie',
-      image: '/menu/CHILDRENS_PASTRY_BAG.png'
-    },
-    {
-      id: 5,
-      name: 'Cake mail; MR TEMPTATION',
-      category: 'Cake',
-      price: '₦9850',
-      description: 'Flavors; carrot , marble, plantain',
-      image: '/menu/CAKEMAILMRTEMPTATION.jpg'
-    },
-    {
-      id: 6,
-      name: 'Cake mail; MR ORIGINAL',
-      category: 'Cakes',
-      price: '₦9850',
-      description: 'Sig Vanilla, Red velvet and chocolate',
-      image: '/menu/CAKEMAILMRORIGINAL.jpg'
-    },
-    {
-      id: 7,
-      name: 'White Chocolate Oat Cookie',
-      category: 'Cookies',
-      price: '₦2750',
-      description: 'Dozen of chewy cookies loaded with premium chocolate chips',
-      image: '/menu/WHITECHOCOLATEOATCOOKIE.jpg'
-    },
-    {
-      id: 8,
-      name: 'Chicken Tortilla wrap',
-      category: 'Snack',
-      price: '₦6000',
-      description: 'Chicken Tortilla wrap',
-      image: '/menu/CHICKENTORTILAWRAP.jpg'
-    },
-    {
-      id: 9,
-      name: 'Tea Premium Breakfast Tray',
-      category: 'Special Orders',
-      price: '₦100000',
-      description: 'Waffles, Sandwitch, Cake, Egg, Drinks etc',
-      image: '/menu/TEAPREMIUMBREAKFASTTRAY.jpg'
-    },
-    {
-      id: 10,
-      name: 'Yougurt',
-      category: 'Drinks',
-      price: '₦1800',
-      description: 'vanilla , Strawberry , Banana',
-      image: '/menu/YOGURT.png'
-    },
-    {
-      id: 11,
-      name: 'Chicken Sandwitch',
-      category: 'Snack',
-      price: '₦2400',
-      description: 'Chicken sandwitch',
-      image: '/menu/CHICKENSANDWITCH.jpg'
-    },
-    {
-      id: 12,
-      name: 'Milkshake',
-      category: 'Drinks',
-      price: '₦2950',
-      description: 'Chill sweet and healthy Milkshake',
-      image: '/menu/MILKSHAKE.jpg'
-    },
-    
-    // BREAD & ROLLS (IDs 13-18)
-    { id: 13, name: 'Bannana Loaf', category: 'Bread & Rolls', price: '₦3950', description: 'Super-moist, homemade banana bread packed with ripe bananas and warm spices. A comforting, timeless treat perfect with coffee.', image: '/menu/BANANALOAF.jpg' },
-    { id: 14, name: 'Brownie cup', category: 'Chin Chin & Snacks', price: '₦3000', description: 'Sweet brownies', image: '/menu/Brownie cup.png' },
-    { id: 15, name: 'Gizodo pack', category: 'Chin Chin & Snacks', price: '₦11,900', description: 'Nutritious whole wheat bread', image: '/menu/Gizdodo_pack.png' },
-    { id: 16, name: 'Belgian waffles', category: 'Chin Chin & Snacks', price: '₦1700', description: 'Pack of soft, buttery waffles', image: '/menu/Belgian_waffles.png' },
-    { id: 17, name: 'Milky Bread', category: 'Bread & Rolls', price: '₦1500', description: 'Soft milky bread', image: '/menu/Milky_Bread.jpeg' },
-    { id: 18, name: 'Focaccia Bread', category: 'Bread & Rolls', price: '₦1300', description: 'Olive oil infused Italian bread', image: '/menu/Croissant.png' },
+    specials: {
+      title: 'MOTHERS DAY SPECIALS',
+      products: [
+        { id: 90, name: 'Fluffy cake tray', category: 'specials', price: '₦32,900', description: 'Fluffy cake tray for mothers day', image: '/menu/mothers.jpg' },
+        { id: 91, name: 'Executive Salad Tray', category: 'specials', price: '₦20,000', description: '', image: '/menu/execsaladtray.PNG' },
+        { id: 92, name: 'Treatbox', category: 'specials', price: '₦150,000', description: 'Mothers day treat box', image: '/menu/treatbox.PNG' },
+       // { id: 93, name: 'Diamond Premium Breakfast tray', category: 'specials', price: '₦150000', description: 'Sandwitch, drinks, waffles, puffs, eggs etc', image: '/menu/DIAMONDPREMIUMBREAKFASTTRAY.jpg' },
+       // { id: 94, name: 'Silver Premium Breakfst tray', category: 'specials', price: '₦60000', description: 'Sandwitch, drinks, waffles etc', image: '/menu/DIAMONDPREMIUMBREAKFASTTRAY.jpg' },
+       // { id: 95, name: 'Full bird chops box', category: 'specials', price: '₦50000', description: 'Full bird chops box', image: '/menu/birdbox.PNG' },
+        { id: 96, name: 'Half bird chops box', category: 'specials', price: '₦30000', description: 'Half bird chops box', image: '/menu/birdbox.PNG' },
+      //  { id: 97, name: 'Christmas Day pastry box', category: 'specials', price: '₦48950', description: 'spingrolls, meatpies etc', image: '/menu/CHRISTMASDAYPASTRYBOX.jpg' },
+       // { id: 98, name: 'Christmas day salad tray', category: 'specials', price: '₦19900', description: 'Flaky pastry with seasoned beef filling', image: '/menu/CHRISTMASDAYSALADTRAY.jpg' },
+       // { id: 99, name: 'Individual Premium breakfast box', category: 'specials', price: '₦22500', description: 'Glorious breakfast with cake, apple etc', image: '/menu/INDIVIDUAL_PREMIUM_BREAKFAST.png' },
+       //  { id: 100, name: 'Extra healty premium breakfast tray', category: 'specials', price: '₦82000', description: 'Extra healty premium breakfast tray', image: '/menu/EXTRA_HEALTHY_BREAKFAST_TRAY.png' },
+      ]
+    }
+  };
 
-    // Special orders (IDs 19-24)
-    { id: 19, name: 'Silver Premium Breakfst tray', category: 'Special orders', price: '₦60000', description: 'Sandwitch, drinks, waffles etc', image: '/menu/DIAMONDPREMIUMBREAKFASTTRAY.jpg' },
-    { id: 20, name: 'Diamond Premium Breakfast tray', category: 'Special orders', price: '₦150000', description: 'Sandwitch, drinks, waffles, puffs, eggs etc', image: '/menu/DIAMONDPREMIUMBREAKFASTTRAY.jpg' },
-    { id: 21, name: 'Cake mail; CHIEFs Delight', category: 'Special orders', price: '₦7000', description: 'Flavors; orange, cookies n cream, Green Velvet', image: '/menu/CAKEMAILMRTEMPTATION.jpg' },
-    { id: 22, name: 'Full bird chops box', category: 'Special orders', price: '₦45000', description: 'Full bird chops box', image: '/menu/BIRD_CHOPS_BOX.png' },
-    { id: 23, name: 'Half bird chops box', category: 'Special orders', price: '₦29000', description: 'Half bird chops box', image: '/menu/BIRD_CHOPS_BOX.png' },
-    { id: 24, name: 'Christmas Day pastry box', category: 'Special orders', price: '₦48950', description: 'spingrolls, meatpies etc', image: '/menu/CHRISTMASDAYPASTRYBOX.jpg' },
+  useEffect(() => {
+    const sectionFromState = location.state?.section;
+    if (sectionFromState && menuSections[sectionFromState]) {
+      setActiveSection(sectionFromState);
+    }
+  }, [location.state]);
 
-    // MEAT PIES & SAVORY (IDs 25-30)
-    { id: 25, name: 'Christmas day salad tray', category: 'Special orders', price: '₦19900', description: 'Flaky pastry with seasoned beef filling', image: '/menu/CHRISTMASDAYSALADTRAY.jpg' },
-    { id: 26, name: 'Individual Premium breakfast box', category: 'Special orders', price: '₦22500', description: 'Glorious breakfast with cake, apple etc', image: '/menu/INDIVIDUAL_PREMIUM_BREAKFAST.png' },
-    { id: 27, name: 'Box of peppered chicken', category: 'Special orders', price: '₦31,500', description: '10 chicken drumsticks with 2 eggs', image: '/menu/PEPPEREDCHICKEN_MAXI.png' },
-    { id: 28, name: 'Drumstick chicken salad', category: 'Special orders', price: '₦5000', description: 'Pork sausage wrapped in pastry', image: '/menu/DRUMSTICK_CHICKEN_SALAD.png' },
-    { id: 29, name: 'Shredded chicken salad', category: 'Special orders', price: '₦6000', description: 'ham filling shredded chicken salad', image: '/menu/SHREDDED_CHICKEN_SALAD.png' },
-    { id: 30, name: 'Spinach & Feta Pie', category: 'Meat Pies & Savory', price: '₦850', description: 'Greek-inspired savory pie', image: '/menu/BOX_OF_SPRINGROLLS.png' },
+  // when section changes, reset category filter
+  useEffect(() => {
+    setSelectedCategory('all');
+  }, [activeSection]);
 
-    // CHIN CHIN & SNACKS (IDs 31-36)
-    { id: 31, name: 'Chin Chin painter', category: 'Chin Chin & Snacks', price: '₦18000', description: 'Crispy fried snack, painter', image: '/menu/CHINCHIN_PAINTER.png' },
-    { id: 32, name: 'Creamy puff pots', category: 'Chin Chin & Snacks', price: '₦1500', description: 'creamy puffs', image: '/menu/CREAMY_PUFF_POTS.png' },
-    { id: 33, name: 'Mini Sausage pot', category: 'Chin Chin & Snacks', price: '₦1450', description: 'mini sausage pot', image: '/menu/MINISAUSAGEPOT.jpg' },
-    { id: 34, name: 'Fishroll', category: 'Chin Chin & Snacks', price: '₦950', description: 'Very nice fishroll', image: '/menu/FISHROLL.png' },
-    { id: 35, name: 'Christmas day puffs', category: 'Chin Chin & Snacks', price: '₦100', description: 'variety puffs .. plain , chocolate , coconut', image: '/menu/CHRISTMASDAYPUFF.jpg' },
-    { id: 36, name: 'Milkshake', category: 'Chin Chin & Snacks', price: '₦850', description: 'soft and tasty ghana buns', image: '/menu/GHANA_BUNS.png' },
+  const currentSection = menuSections[activeSection];
+  const categories = ['all', ...new Set(currentSection.products.map(p => p.category))];
 
-    // DONUTS (IDs 37-42)
-    { id: 37, name: 'Fresh cold pressed juice', category: 'Drinks', price: '₦2000', description: 'fresh cold juice, zobo (1200)', image: '/menu/FRESH COLD JUICE.png' },
-    { id: 38, name: 'Crispy chicken burger', category: 'Chin Chin & Snacks', price: '₦5000', description: 'Crispy chicken burger', image: '/menu/CRISPY_CHICKEN_BURGER.png' },
-    { id: 39, name: 'Greek Yogurt parfait', category: 'Drinks', price: '₦3500', description: 'Greek Yogurt', image: '/menu/GREEK_YOGURT_PARFAIT.png' },
-    { id: 40, name: 'Sugar coated Donny pots', category: 'Donuts', price: '₦1000', description: 'Sugar coated Donny pots', image: '/menu/Sugar_coated_Donny_pots.png' },
-    { id: 41, name: 'Sweet sugar snack (x6)', category: 'Chin Chin & Snacks', price: '₦1000', description: 'Sweet sugar snack', image: '/menu/Sweet_sugar_snack.png' },
-    { id: 42, name: 'Nutella filled donuts', category: 'Donuts', price: '₦3000', description: 'Warm Nutella filled coating', image: '/menu/Nutella_filled_Donut.png' },
-
-    // COOKIES (IDs 43-48)
-    { id: 43, name: 'Large chin chin', category: 'Chin Chin & Snacks', price: '₦5,500', description: 'Pack of 6 classic cookies', image: '/menu/Large_Chinchin.png' },
-    { id: 44, name: 'Scotch Egg (x4)', category: 'Chin Chin & Snacks', price: '₦7000', description: 'Melt-in-mouth scotch egg', image: '/menu/SCOTCHED_EGG.png' },
-    { id: 45, name: 'popcorn', category: 'Chin Chin & Snacks', price: '₦650', description: 'Sweetened/salted sweetened', image: '/menu/POPCORN.png' },
-    { id: 46, name: 'Extra healty premium breakfast tray', category: 'Special orders', price: '₦82000', description: 'Extra healty premium breakfast tray', image: '/menu/EXTRA_HEALTHY_BREAKFAST_TRAY.png' },
-    { id: 47, name: 'Premium Gift Box', category: 'Drinks', price: '₦9000', description: 'Crunchy almond delight', image: '/menu/Be my VAL treat box.jpg' },
-    { id: 48, name: 'Chocolate chip Cookies', category: 'Cookies', price: '₦1200', description: 'Chocolate chip cookies', image: '/menu/Chocolate_chip_cookies.png' },
-
-    // CUPCAKES & SMALL CAKES (IDs 49-54)
-    { id: 49, name: 'Cake in a cup', category: 'Cupcakes & Small Cakes', price: '₦2200', description: 'vanilla , Red velvet , chocolate , malted milk , strawberry', image: '/menu/Box_of_4_cupcakes.png' },
-    { id: 50, name: 'Ice cream', category: 'Cupcakes & Small Cakes', price: '₦1300', description: 'red velvet , vanilla , chocolate , cookies n crème , strawberry , malted milk', image: '/menu/ICELOLLIES.jpg' },
-    { id: 51, name: 'Christmas Day Salad Tray', category: 'Cupcakes & Small Cakes', price: '₦5,500', description: 'All flavours available', image: '/menu/CHRISTMASDAYSALADTRAY.jpg' },
-    { id: 52, name: 'Lettuce wrap', category: 'Drinks', price: '₦9000', description: 'Elegant red velvet', image: '/menu/CHICKENTORTILAWRAP.jpg' },
-    { id: 53, name: 'Oat cookies', category: 'Cupcakes & Small Cakes', price: '₦1750', description: 'Moist cream cake', image: '/menu/WHITECHOCOLATEOATCOOKIE.jpg' },
-    { id: 54, name: 'Spicy Fish Rolls & Sausages', category: 'Cupcakes & Small Cakes', price: '₦1800', description: 'Rich chocolate indulgence', image: '/menu/FISHROLL.png' },
-
-    // LARGE CAKES (IDs 55-60)
-    { id: 55, name: 'Puffs', category: 'Large Cakes', price: '₦30000', description: 'Light and fluffy sweet cake', image: '/menu/CREAMY_PUFF_POTS.png' },
-    { id: 56, name: '6" tripple delight naked cake', category: 'Large Cakes', price: '₦16000', description: 'Decadent chocolate layer cake', image: '/menu/6_triple_delight_naked_cake.png' },
-    { id: 57, name: 'Carrot Cake', category: 'Large Cakes', price: '₦5500', description: 'Moist carrot with cream cheese frosting', image: '/menu/CAKEMAILMRTEMPTATION.jpg' },
-    { id: 58, name: 'Red Velvet Cake', category: 'Large Cakes', price: '₦6500', description: 'Classic red velvet with cream cheese', image: '/menu/MYHEARTLOVECAKE.jpg' },
-    { id: 59, name: 'Lemon Drizzle Cake', category: 'Large Cakes', price: '₦5000', description: 'Tangy lemon with glaze', image: '/menu/CHEESECAKE_SLICE.png' },
-    { id: 60, name: 'Love Heart Cake', category: 'Chin Chin & Snacks', price: '₦9250', description: 'Traditional fruit cake mix', image: '/menu/MYHEARTLOVECAKE.jpg' },
-
-    // SPECIALTY CAKES (IDs 61-66)
-    { id: 61, name: 'Wedding Cake', category: 'Specialty Cakes', price: '₦15000', description: '3-tier elegant wedding cake', image: '/menu/Triple delight Bento cake.png' },
-    { id: 62, name: 'Cake slices', category: 'Specialty Cakes', price: '₦8000', description: 'Customizable birthday cake', image: '/menu/CAKEMAILMRORIGINAL.jpg' },
-    { id: 63, name: 'Cheesecake', category: 'Specialty Cakes', price: '₦7000', description: 'Creamy New York style cheesecake', image: '/menu/CHEESECAKE_SLICE.png' },
-    { id: 64, name: 'Red Velvet Cupcakes', category: 'Donuts', price: '₦7500', description: 'Chocolate with cherries', image: '/menu/Jumbo cupcake.jpg' },
-    { id: 65, name: 'Box of 4 cupcakes', category: 'Cupcakes & Small Cakes', price: '₦3000', description: 'Box of cupcake', image: '/menu/Box_of_4_cupcakes.png' },
-    { id: 66, name: 'Cookies and Cream Cake', category: 'Specialty Cakes', price: '₦3000', description: 'Light and airy mousse', image: '/menu/CAKEMAILMRORIGINAL.jpg' },
-
-    // PASTRIES & TARTS (IDs 67-70)
-    { id: 67, name: 'Croissant', category: 'Pastries & Tarts', price: '₦3000', description: 'Buttery French croissant', image: '/menu/Croissant.png' },
-    { id: 68, name: 'Box of Springrolls (10)', category: 'Pastries & Tarts', price: '₦3500', description: 'Sweet springrolls', image: '/menu/BOX_OF_SPRINGROLLS.png' },
-    { id: 69, name: 'Club Croissant', category: 'Pastries & Tarts', price: '₦5000', description: 'French croissant with extra veggies', image: '/menu/CLUB_CROISSANT.png' },
-    { id: 70, name: 'Pot of Samosas (10)', category: 'Pastries & Tarts', price: '₦4000', description: 'Sweet mouth-watery samosas', image: '/menu/Pot of samosas.png' }
-  ];
-
-  // Dynamically generate categories from products array
-  const categories = ['all', ...new Set(products.map(p => p.category))];
-
-  const filteredProducts = selectedCategory === 'all' 
-    ? products 
-    : products.filter(product => product.category === selectedCategory);
+  const filteredProducts = selectedCategory === 'all'
+    ? currentSection.products
+    : currentSection.products.filter(product => product.category === selectedCategory);
 
   const handleQuantityChange = (id, delta) => {
     setQuantities(prev => {
@@ -210,14 +155,28 @@ const MenuPage = () => {
     });
   };
 
+  const handleFlavorChange = (productId, flavor) => {
+    setSelectedFlavors(prev => ({
+      ...prev,
+      [productId]: flavor
+    }));
+  };
+
   const handleAddToCart = (product) => {
     const qty = quantities[product.id] || 1;
-    addToCart(product, qty);
+    const selectedFlavor = selectedFlavors[product.id] || (product.flavors ? product.flavors[0] : null);
+    
+    const cartItem = {
+      ...product,
+      selectedFlavor,
+      quantity: qty
+    };
+    
+    addToCart(cartItem, qty);
     toast({
       title: "Added to Cart",
-      description: `Added ${qty} ${product.name} to your cart.`,
+      description: `Added ${qty} ${product.name}${selectedFlavor ? ` (${selectedFlavor})` : ''} to your cart.`,
     });
-    // Reset quantity after adding
     setQuantities(prev => ({ ...prev, [product.id]: 1 }));
   };
 
@@ -250,24 +209,55 @@ const MenuPage = () => {
         {/* Menu Section */}
         <section className="py-16 bg-background">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            {/* Category Filter */}
-            <div className="mb-12 overflow-x-auto pb-4">
-              <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full min-w-max">
-                <TabsList className="flex flex-wrap gap-2 bg-secondary p-2 rounded-xl h-auto justify-center">
-                  {categories.map((category) => (
-                    <TabsTrigger
-                      key={category}
-                      value={category}
-                      className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-smooth capitalize px-4 py-2"
-                    >
-                      {category === 'all' ? 'All Items' : category}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </Tabs>
+            {/* Debug: Current Section Indicator */}
+            <div className="mb-4 p-4 bg-yellow-100 border border-yellow-300 rounded-lg">
+              <p className="text-sm text-yellow-800">
+                <strong>Current Section:</strong> {currentSection.title} | <strong>Active Section State:</strong> {activeSection} | <strong>Selected Category:</strong> {selectedCategory}
+              </p>
+              <p className="text-sm text-yellow-800 mt-1">
+                <strong>Available Categories:</strong> {categories.join(', ')} | <strong>Filtered Products:</strong> {filteredProducts.length} items
+              </p>
             </div>
 
-            {/* Products Grid */}
+            {/* Section tabs */}
+            <div className="mb-8 overflow-x-auto pb-4">
+              <div className="flex flex-wrap gap-2 bg-secondary p-2 rounded-xl justify-center">
+                {Object.entries(menuSections).map(([key, section]) => (
+                  <button
+                    key={key}
+                    onClick={() => setActiveSection(key)}
+                    className={`rounded-lg transition-smooth capitalize px-4 py-2 ${
+                      activeSection === key
+                        ? 'bg-primary text-primary-foreground'
+                        : 'hover:bg-primary/10'
+                    }`}
+                  >
+                    {section.title}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Category Filter */}
+            <div className="mb-12 overflow-x-auto pb-4">
+              <div className="flex flex-wrap gap-2 bg-secondary p-2 rounded-xl justify-center">
+                {categories.map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => setSelectedCategory(category)}
+                    className={`rounded-lg transition-smooth capitalize px-4 py-2 ${
+                      selectedCategory === category
+                        ? 'bg-primary text-primary-foreground'
+                        : 'hover:bg-primary/10'
+                    }`}
+                  >
+                    {category === 'all' ? 'All Items' : category}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Products Grid starts here */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
               {filteredProducts.map((product, index) => (
                 <motion.div
@@ -290,6 +280,26 @@ const MenuPage = () => {
                     <CardContent className="p-6 flex-1 flex flex-col">
                       <h3 className="text-xl font-bold text-foreground group-hover:text-gray-900 mb-2 transition-colors">{product.name}</h3>
                       <p className="text-sm text-muted-foreground group-hover:text-gray-800 mb-4 flex-1 transition-colors">{product.description}</p>
+                      
+                      {product.flavors && (
+                        <div className="mb-4">
+                          <Select
+                            value={selectedFlavors[product.id] || product.flavors[0]}
+                            onValueChange={(value) => handleFlavorChange(product.id, value)}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Select flavor" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {product.flavors.map((flavor) => (
+                                <SelectItem key={flavor} value={flavor}>
+                                  {flavor}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
                       
                       <div className="flex flex-col gap-4 mt-auto">
                         <span className="text-2xl font-bold text-primary group-hover:text-gray-900 transition-colors">{product.price}</span>
