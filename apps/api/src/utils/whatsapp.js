@@ -28,9 +28,10 @@ function formatReceiptMessage(orderData, customerData) {
   const { orderId, amount, currency = 'NGN', items = [] } = orderData;
   const { customerName, customerEmail, phone, street, city } = customerData;
   
-  const itemsList = items.map(item => 
-    `• ${item.name} x${item.quantity} = ₦${(item.price * item.quantity).toLocaleString()}`
-  ).join('\n');
+  const itemsList = items.map(item => {
+    const flavorText = item.selectedFlavor ? ` (${item.selectedFlavor})` : '';
+    return `• ${item.name}${flavorText} x${item.quantity} = ₦${(item.price * item.quantity).toLocaleString()}`;
+  }).join('\n');
   
   const message = `🎉 *KITCHEN PASTRIES - ORDER RECEIPT*
 
@@ -83,7 +84,7 @@ async function sendWhatsAppMessage(phoneNumber, message) {
     // Using Evolution API or similar WhatsApp service
     // Adjust the endpoint based on your WhatsApp service provider
     const response = await fetch(
-      `https://api.green-api.com/waInstance${WHATSAPP_INSTANCE_ID}/sendMessage/${WHATSAPP_API_KEY}`,
+      `https://api.greenapi.com/waInstance${WHATSAPP_INSTANCE_ID}/sendMessage/${WHATSAPP_API_KEY}`,
       {
         method: 'POST',
         headers: {
@@ -148,9 +149,10 @@ export async function sendKitchenNotification(orderData, customerData) {
     const { orderId, amount, items = [] } = orderData;
     const { customerName, phone, street, city } = customerData;
     
-    const itemsList = items.map(item => 
-      `• ${item.name} x${item.quantity}`
-    ).join('\n');
+    const itemsList = items.map(item => {
+      const flavorText = item.selectedFlavor ? ` (${item.selectedFlavor})` : '';
+      return `• ${item.name}${flavorText} x${item.quantity}`;
+    }).join('\n');
     
     const kitchenMessage = `🔔 *NEW ORDER ALERT!*
 
