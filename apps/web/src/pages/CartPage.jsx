@@ -66,6 +66,9 @@ const CartPage = () => {
                             />
                             <div className="flex-grow text-center sm:text-left">
                               <h3 className="text-xl font-bold text-foreground group-hover:text-gray-900 transition-colors">{item.name}</h3>
+                              {item.selectedFlavor && (
+                                <p className="text-sm text-muted-foreground mt-1">Flavor: {item.selectedFlavor}</p>
+                              )}
                               <p className="text-primary font-semibold mt-1 group-hover:text-gray-900 transition-colors">{item.price}</p>
                             </div>
                             <div className="flex items-center gap-4">
@@ -114,20 +117,20 @@ const CartPage = () => {
                           <span className="text-muted-foreground">Subtotal</span>
                           <span className="font-medium">{formatCurrency(subtotal)}</span>
                         </div>
-                        <div className="flex justify-between text-foreground">
-                          <span className="text-muted-foreground">Tax (10%)</span>
-                          <span className="font-medium">{formatCurrency(tax)}</span>
-                        </div>
-                        <div className="flex justify-between text-foreground">
-                          <span className="text-muted-foreground">Shipping</span>
-                          <span className="font-medium">{formatCurrency(shipping)}</span>
-                        </div>
                       </div>
 
                       <div className="pt-4 border-t border-border">
                         <div className="flex justify-between items-center">
                           <span className="text-lg font-bold text-foreground">Total</span>
                           <span className="text-3xl font-bold text-primary">{formatCurrency(total)}</span>
+                        </div>
+                        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <p className="text-sm text-blue-800">
+                            <strong>Note:</strong> For deliveries, please contact us on WhatsApp at 
+                            <a href="https://wa.me/2348069747505" className="text-blue-600 hover:text-blue-800 font-medium ml-1">
+                              +234 806 974 7505
+                            </a> after placing your order.
+                          </p>
                         </div>
                       </div>
 

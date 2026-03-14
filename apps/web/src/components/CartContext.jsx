@@ -31,14 +31,13 @@ export const CartProvider = ({ children }) => {
       return sum + (price * item.quantity);
     }, 0);
     
-    const tax = subtotal * 0.10; // 10% tax
-    const shipping = subtotal > 0 ? 500 : 0; // ₦500 flat rate if cart is not empty
-    const total = subtotal + tax + shipping;
+    // No tax or shipping fees
+    const total = subtotal;
 
     setTotals({
       subtotal: subtotal.toFixed(2),
-      tax: tax.toFixed(2),
-      shipping: shipping.toFixed(2),
+      tax: '0.00',
+      shipping: '0.00',
       total: total.toFixed(2)
     });
   };
@@ -47,28 +46,56 @@ export const CartProvider = ({ children }) => {
     if (quantity <= 0) return;
 
     setCartItems(prevItems => {
-      const existingItem = prevItems.find(item => item.id === product.id);
+      // Create a unique key that includes flavor for items with flavors
+      const itemKey = product.selectedFlavor 
+        ? `${product.id}-${product.selectedFlavor}` 
+        : product.id;
+      
+      const existingItem = prevItems.find(item => {
+        const existingKey = item.selectedFlavor 
+          ? `${item.id}-${item.selectedFlavor}` 
+          : item.id;
+        return existingKey === itemKey;
+      });
+      
       if (existingItem) {
-        return prevItems.map(item =>
-          item.id === product.id
+        return prevItems.map(item => {
+          const existingKey = item.selectedFlavor 
+            ? `${item.id}-${item.selectedFlavor}` 
+            : item.id;
+          return existingKey === itemKey
             ? { ...item, quantity: item.quantity + quantity }
-            : item
-        );
+            : item;
+        });
       }
       return [...prevItems, { ...product, quantity }];
     });
   };
 
   const removeFromCart = (productId) => {
-    setCartItems(prevItems => prevItems.filter(item => item.id !== productId));
+    setCartItems(prevItems => prevItems.filter(item => {
+      const itemKey = item.selectedFlavor 
+        ? `${item.id}-${item.selectedFlavor}` 
+        : item.id;
+      const targetKey = item.selectedFlavor 
+        ? `${productId}-${item.selectedFlavor}` 
+        : productId;
+      return itemKey !== targetKey;
+    }));
   };
 
   const updateQuantity = (productId, quantity) => {
     if (quantity <= 0) return;
     setCartItems(prevItems =>
-      prevItems.map(item =>
-        item.id === productId ? { ...item, quantity } : item
-      )
+      prevItems.map(item => {
+        const itemKey = item.selectedFlavor 
+          ? `${item.id}-${item.selectedFlavor}` 
+          : item.id;
+        const targetKey = item.selectedFlavor 
+          ? `${productId}-${item.selectedFlavor}` 
+          : productId;
+        return itemKey === targetKey ? { ...item, quantity } : item;
+      })
     );
   };
 

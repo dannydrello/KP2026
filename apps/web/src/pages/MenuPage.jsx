@@ -18,6 +18,7 @@ const MenuPage = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [quantities, setQuantities] = useState({});
   const [selectedFlavors, setSelectedFlavors] = useState({});
+  const [cakeComments, setCakeComments] = useState({});
   const { addToCart } = useCart();
   const { toast } = useToast();
 
@@ -27,9 +28,9 @@ const MenuPage = () => {
       title: 'CAFE',
       products: [
         { id: 1, name: 'Cheesecake slice', category: 'cakes', price: '₦6000', description: 'Buttery, flaky layers of perfection baked fresh every morning', image: '/menu/CHEESECAKE_SLICE.png' },
-        { id: 2, name: 'iced cake slice', category: 'cakes', price: '₦3675', description: 'Rich, moist iced cake', image: '/menu/icecakeslice.jpg' },
+        { id: 2, name: 'iced cake slice', category: 'cakes', price: '₦3675', description: 'vanilla chocolate, red velvet, strawberry', image: '/menu/icecakeslice.jpg' },
         { id: 3, name: 'Hotdog waffle', category: 'pastries', price: '₦1260', description: 'Soft, fluffy waffles with a savory twist', image: '/menu/HOTDOGWAFFLE.jpg' },
-        { id: 4, name: 'Childrens pastry party bag', category: 'pastries', price: '₦2000', description: '2 Ghana buns , 1 hotdog waffle and party Meatpie', image: '/menu/pastrybag.jpg' },
+        { id: 4, name: 'Childrens pastry party bag', category: 'pastries', price: '₦3900', description: '2 Ghana buns , 1 hotdog waffle and party Meatpie', image: '/menu/pastrybag.jpg' },
         { id: 7, name: 'White Chocolate Oat Cookie', category: 'cookies', price: '₦4147.50', description: 'Dozen of chewy cookies loaded with premium chocolate chips', image: '/menu/WHITECHOCOLATEOATCOOKIE.jpg' },
         { id: 8, name: 'Plain waffles', category: 'snacks', price: '₦2625', description: 'Soft, buttery waffles', image: '/menu/waffles.jpg' },
         { id: 10, name: 'Yougurt', category: 'drinks', price: '₦2625', description: 'Greek yogurt parfait', image: '/menu/yogurt.jpg', flavors: ['Vanilla', 'Strawberry', 'Banana'] },
@@ -55,7 +56,7 @@ const MenuPage = () => {
         { id: 33, name: 'Meatpie', category: 'snacks', price: '₦2572.50', description: 'mini sausage pot', image: '/menu/meatpie.jpg' },
         { id: 34, name: 'Milky doughnut', category: 'snacks', price: '₦1890', description: 'Very nice fishroll', image: '/menu/Milky_donut.png' },
         { id: 35, name: 'Nutella filled doughnut', category: 'snacks', price: '₦1050', description: 'Sweet sugar doughnut', image: '/menu/Nutella_filled_Donut.png' },       
-        { id: 37, name: 'Fresh cold pressed juice', category: 'drinks', price: '₦3885', description: 'fresh cold juice', image: '/menu/freshjuice.jpg' },
+        { id: 37, name: 'Fresh cold pressed juice', category: 'drinks', price: '₦3885', description: 'Orange, pineapple , Bloody goodness, Signature Zobo', image: '/menu/freshjuice.jpg' },
         { id: 38, name: 'Crispy chicken burger', category: 'snacks', price: '₦6615', description: 'Crispy chicken burger', image: '/menu/CRISPY_CHICKEN_BURGER.png' },
         { id: 23, name: 'Cake loaf', category: 'cakes', price: '₦3570', description: 'Delicious cake loaf', image: '/menu/cakeloaf.jpeg', flavors: ['Chocolate', 'Vanilla', 'Red Velvet', 'Cookies N Creme', 'Strawberry', 'Malted Milk'] },
        
@@ -67,17 +68,17 @@ const MenuPage = () => {
         { id: 45, name: 'Milky popcorn', category: 'snacks', price: '₦1995', description: 'Sweetened/salted sweetened', image: '/menu/popcorn.jpg' },
         { id: 47, name: 'Egg roll', category: 'snacks', price: '₦787.50', description: 'Delicious egg roll', image: '/menu/eggroll.jpg' },
         { id: 48, name: 'Cookies', category: 'cookies', price: '₦4095', description: 'Fresh baked cookies', image: '/menu/cookies.jpeg', flavors: ['Classic', 'NY Style', 'Red Velvet'] },
-        { id: 15, name: 'Butter cookies', category: 'cookies', price: '₦1155', description: 'cookies', image: '/menu/buttercookies.jpg' },
-        { id: 49, name: 'Cake in a cup', category: 'cakes', price: '₦5250', description: 'Delicious cake in a cup', image: '/menu/cakeinacup.jpeg', flavors: ['Vanilla', 'Red Velvet', 'Chocolate', 'Malted Milk'] },
+        { id: 15, name: 'Butter cookies (3)', category: 'cookies', price: '₦4675', description: 'cookies', image: '/menu/buttercookies.jpg' },
+        { id: 49, name: 'Cake in a cup (3)', category: 'cakes', price: '₦4900', description: 'Delicious cake in a cup', image: '/menu/cakeinacup.jpeg', flavors: ['Vanilla', 'Red Velvet', 'Chocolate', 'Malted Milk'] },
         { id: 50, name: 'Ice 2 in 1 cupcake', category: 'cakes', price: '₦2362.50', description: 'delicious ice cupcake', image: '/menu/SINGLEICEDCUPCAKES.jpg' },      
         { id: 52, name: 'Low sugar carrot Loaf', category: 'cakes', price: '₦5825.50', description: 'Low sugar carrot cake', image: '/menu/carrotcake.jpg' },
         { id: 53, name: 'Granola', category: 'snacks', price: '₦7350', description: 'Crunchy and healthy granola', image: '/menu/granola.jpg' },    
         { id: 55, name: 'Puff pot', category: 'snacks', price: '₦1785', description: 'Creamy puff pot', image: '/menu/puffpots.jpg' },
-        { id: 22, name: 'Ghana buns', category: 'snacks', price: '₦1050', description: 'Delicious Ghana buns', image: '/menu/GHANA_BUNS.png' },
-        { id: 56, name: '6" cake', category: 'cakes', price: '₦7245', description: 'Decadent cake', image: '/menu/8inchcake.jpg' },      
-        { id: 58, name: '8" cake', category: 'cakes', price: '₦24525', description: 'Classic cake', image: '/menu/8inchcake.jpg' },
+        { id: 22, name: 'Ghana buns (3)', category: 'snacks', price: '₦1050', description: 'Delicious Ghana buns', image: '/menu/GHANA_BUNS.png' },
+        { id: 56, name: '6" Ready to go cake', category: 'cakes', price: '₦7245', description: 'Freshly made and Iced', image: '/menu/8inchcake.jpg' },      
+        { id: 58, name: '8"  Ready to go cake', category: 'cakes', price: '₦24525', description: 'Freshly made and Iced', image: '/menu/8inchcake.jpg' },
         { id: 59, name: 'Muffins', category: 'snacks', price: '₦3150', description: 'Fresh baked muffins', image: '/menu/muffins.jpeg', flavors: ['Chocolate', 'Oreos', 'Plain'] },
-        { id: 60, name: '10" Cake', category: 'cakes', price: '₦29400', description: '10 inches Cake', image: '/menu/10inchcake.jpg' },
+        { id: 60, name: '10" Ready to go Cake', category: 'cakes', price: '₦29400', description: 'Freshly made and Iced', image: '/menu/10inchcake.jpg' },
         { id: 61, name: 'Fishroll', category: 'snacks', price: '₦1260', description: 'Delicious fishroll', image: '/menu/FISHROLL.png' },
         { id: 62, name: 'Brownies', category: 'snacks', price: '₦4179', description: 'Decadent brownies', image: '/menu/brownies.jpg' },
         { id: 63, name: 'Bento cake', category: 'cakes', price: '₦6300', description: 'Bento cake', image: '/menu/bentocake.jpg' },
@@ -162,13 +163,22 @@ const MenuPage = () => {
     }));
   };
 
+  const handleCakeCommentChange = (productId, comment) => {
+    setCakeComments(prev => ({
+      ...prev,
+      [productId]: comment
+    }));
+  };
+
   const handleAddToCart = (product) => {
     const qty = quantities[product.id] || 1;
     const selectedFlavor = selectedFlavors[product.id] || (product.flavors ? product.flavors[0] : null);
+    const cakeComment = cakeComments[product.id] || '';
     
     const cartItem = {
       ...product,
       selectedFlavor,
+      cakeComment,
       quantity: qty
     };
     
@@ -298,6 +308,25 @@ const MenuPage = () => {
                               ))}
                             </SelectContent>
                           </Select>
+                        </div>
+                      )}
+                      
+                      {product.name.toLowerCase().includes('ready to go cake') && (
+                        <div className="mb-4">
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            Cake Message (Optional)
+                          </label>
+                          <textarea
+                            value={cakeComments[product.id] || ''}
+                            onChange={(e) => handleCakeCommentChange(product.id, e.target.value)}
+                            placeholder="Enter what you'd like written on the cake..."
+                            className="w-full p-3 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                            rows={2}
+                            maxLength={100}
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {(cakeComments[product.id] || '').length}/100 characters
+                          </p>
                         </div>
                       )}
                       

@@ -134,7 +134,9 @@ const CheckoutForm = () => {
         id: item.id,
         name: item.name,
         price: item.price,
-        quantity: item.quantity
+        quantity: item.quantity,
+        selectedFlavor: item.selectedFlavor,
+        cakeComment: item.cakeComment
       })),
       createdAt: new Date().toISOString()
     };

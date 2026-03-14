@@ -100,6 +100,12 @@ const OrderPage = () => {
                               </span>
                               <div className="flex flex-col">
                                 <span className="font-medium text-foreground line-clamp-2">{item.name}</span>
+                                {item.selectedFlavor && (
+                                  <span className="text-xs text-muted-foreground">Flavor: {item.selectedFlavor}</span>
+                                )}
+                                {item.cakeComment && (
+                                  <span className="text-xs text-muted-foreground italic">Cake message: "{item.cakeComment}"</span>
+                                )}
                                 <span className="text-xs text-muted-foreground mt-1">{item.price} each</span>
                               </div>
                             </div>
@@ -115,14 +121,6 @@ const OrderPage = () => {
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Subtotal</span>
                           <span className="font-medium text-foreground text-right">{formatCurrency(subtotal)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Tax (10%)</span>
-                          <span className="font-medium text-foreground text-right">{formatCurrency(tax)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Shipping</span>
-                          <span className="font-medium text-foreground text-right">{formatCurrency(shipping)}</span>
                         </div>
                       </div>
 
