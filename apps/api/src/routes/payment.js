@@ -44,8 +44,8 @@ async function verifyPaymentWithPaydestal(transactionReference) {
       return {
         status: mappedStatus,
         paydestalStatus: status,
-        amount: data.data.amount,
-        reference: data.data.payReference
+        amount: data.data.amountPaid || data.data.amount,
+        reference: data.data.payReference || data.data.reference
       };
     }
     
@@ -206,7 +206,7 @@ router.post('/check-status/:orderId', async (req, res) => {
 
     // Get transaction from database
     let conn = await db.getConnection();
-    const rows = await conn.query('SELECT * FROM transactions WHERE orderId = ?', [orderId]);
+    const rows = await conn.query('SELECT * FROM transactions WHERE orderId = ? OR paydestal_reference = ?', [orderId, orderId]);
     
     if (rows.length === 0) {
       conn.release();
@@ -227,8 +227,11 @@ router.post('/check-status/:orderId', async (req, res) => {
       });
     }
 
+    // Use paydestal_reference if available, otherwise use orderId
+    const referenceToCheck = transaction.paydestal_reference || orderId;
+    
     // Verify with Paydestal API
-    const verification = await verifyPaymentWithPaydestal(orderId);
+    const verification = await verifyPaymentWithPaydestal(referenceToCheck);
     
     if (verification) {
       // Update status if it changed
@@ -285,45 +288,46 @@ router.post('/check-status/:orderId', async (req, res) => {
 // POST /payment/webhook - Receive Paydestal payment callbacks
 router.post('/webhook', async (req, res) => {
   try {
-    const { event, data, signature } = req.body;
+    const { event, data } = req.body;
+    const nmac = req.headers.nmac;
 
-    logger.info('Received Paydestal webhook', { event, paymentId: data?.id });
+    logger.info('Received Paydestal webhook', { event, payReference: data?.payReference });
 
-    // Verify webhook signature
-    if (!verifyWebhookSignature(req.body, signature)) {
+    // Verify webhook signature using HMAC-SHA512 with payReference
+    if (!verifyWebhookSignature(data?.payReference, nmac)) {
       logger.warn('Invalid webhook signature');
       return res.status(401).json({ error: 'Invalid webhook signature' });
     }
 
     // Handle different payment events
     try {
-      if (event === 'payment.completed') {
-        logger.info('Payment completed', { paymentId: data.id, orderId: data.order_id });
-        await updateTransactionStatus(data.order_id, 'completed', data.id);
+      if (event === 'success' || event === 'charge.success' || event === 'fixed.payment.success') {
+        logger.info('Payment completed', { payReference: data.payReference, amount: data.amount });
+        await updateTransactionStatus(data.payReference, 'completed', data.payReference);
         
         // Send WhatsApp receipts
         try {
           let conn = await db.getConnection();
-          const rows = await conn.query('SELECT * FROM transactions WHERE orderId = ?', [data.order_id]);
+          const rows = await conn.query('SELECT * FROM transactions WHERE orderId = ?', [data.payReference]);
           conn.release();
 
           if (rows.length === 0) {
-            logger.warn('Transaction not found for WhatsApp', { orderId: data.order_id });
+            logger.warn('Transaction not found for WhatsApp', { payReference: data.payReference });
             return;
           }
 
           const transaction = rows[0];
           
           const orderData = {
-            orderId: data.order_id,
-            amount: data.amount / 100, // Convert from cents
-            currency: 'NGN',
+            orderId: data.payReference,
+            amount: data.amount,
+            currency: data.currency || 'NGN',
             items: JSON.parse(transaction.orderItems || '[]')
           };
           
           const customerData = {
-            customerName: transaction.customerName,
-            customerEmail: transaction.customerEmail,
+            customerName: data.customerName || transaction.customerName,
+            customerEmail: data.customerEmail || transaction.customerEmail,
             phone: transaction.customerPhone || '',
             street: transaction.street || '',
             city: transaction.city || ''
@@ -336,19 +340,17 @@ router.post('/webhook', async (req, res) => {
           ]).catch(err => logger.error('Error sending WhatsApp messages', err.message));
           
         } catch (waError) {
-          logger.warn('Could not send WhatsApp receipts', { orderId: data.order_id, error: waError.message });
+          logger.warn('Could not send WhatsApp receipts', { payReference: data.payReference, error: waError.message });
           // Don't fail the webhook if WhatsApp fails
         }
         
-      } else if (event === 'payment.failed') {
-        logger.warn('Payment failed', { paymentId: data.id, orderId: data.order_id });
-        await updateTransactionStatus(data.order_id, 'failed', data.id);
-      } else if (event === 'payment.pending') {
-        logger.info('Payment pending', { paymentId: data.id, orderId: data.order_id });
-        await updateTransactionStatus(data.order_id, 'pending', data.id);
+      } else if (event === 'failed' || event === 'charge.failed' || event === 'fixed.payment.failed') {
+        logger.warn('Payment failed', { payReference: data.payReference });
+        await updateTransactionStatus(data.payReference, 'failed', data.payReference);
       }
+
     } catch (dbError) {
-      logger.error('Failed to update transaction status', { orderId: data.order_id, error: dbError.message });
+      logger.error('Failed to update transaction status', { payReference: data.payReference, error: dbError.message });
       // Still acknowledge the webhook even if DB update fails
     }
 
@@ -363,20 +365,23 @@ router.post('/webhook', async (req, res) => {
   }
 });
 
-// Helper function to verify webhook signature
-function verifyWebhookSignature(payload, signature) {
-  // Create a string representation of the payload (excluding signature)
-  const { signature: _, ...payloadWithoutSignature } = payload;
-  const payloadString = JSON.stringify(payloadWithoutSignature);
+// Helper function to verify webhook signature using HMAC-SHA512
+function verifyWebhookSignature(payReference, providedNmac) {
+  if (!payReference || !providedNmac) {
+    return false;
+  }
 
-  // Create HMAC-SHA256 hash
-  const hash = crypto
-    .createHmac('sha256', PAYDESTAL_SECRET_KEY)
-    .update(payloadString)
-    .digest('hex');
-
-  // Compare with provided signature
-  return hash === signature;
+  try {
+    const hmac = crypto.createHmac('sha512', PAYDESTAL_SECRET_KEY);
+    hmac.update(payReference);
+    const computedNmac = hmac.digest('hex');
+    
+    // Use timing-safe comparison to prevent timing attacks
+    return crypto.timingSafeEqual(Buffer.from(computedNmac, 'hex'), Buffer.from(providedNmac, 'hex'));
+  } catch (error) {
+    logger.error('Webhook signature verification error', error.message);
+    return false;
+  }
 }
 
 export default router;
