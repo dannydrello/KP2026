@@ -11,21 +11,48 @@ const PAYDESTAL_PUBLIC_KEY = process.env.PAYDESTAL_PUBLIC_KEY;
 const PAYDESTAL_SECRET_KEY = process.env.PAYDESTAL_SECRET_KEY;
 const PAYDESTAL_MODE = process.env.PAYDESTAL_MODE || 'sandbox';
 
-// Helper function to update transaction status in MariaDB
-async function updateTransactionStatus(orderId, status, paymentId) {
-  let conn;
+// Helper function to verify payment status with Paydestal API
+async function verifyPaymentWithPaydestal(transactionReference) {
   try {
-    conn = await db.getConnection();
-    await conn.query(
-      'UPDATE transactions SET status = ?, paydestal_reference = ? WHERE orderId = ?',
-      [status, paymentId, orderId]
-    );
-    logger.info('Transaction status updated', { orderId, status });
+    const baseUrl = PAYDESTAL_MODE === 'live' ? 'https://api.paydestal.com' : 'https://devbox.paydestal.com';
+    const url = `${baseUrl}/pay/api/v1/verify-transaction?transactionReference=${transactionReference}`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${PAYDESTAL_SECRET_KEY}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Paydestal API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    if (data.success && data.data) {
+      const status = data.data.paymentStatus;
+      // Map Paydestal status to our status
+      let mappedStatus = 'pending';
+      if (status === 'SUCCESSFUL') {
+        mappedStatus = 'completed';
+      } else if (['FAILED', 'DECLINED', 'CANCELED', 'ABANDONED'].includes(status)) {
+        mappedStatus = 'failed';
+      }
+      
+      return {
+        status: mappedStatus,
+        paydestalStatus: status,
+        amount: data.data.amount,
+        reference: data.data.payReference
+      };
+    }
+    
+    return null;
   } catch (error) {
-    // Don't throw - webhook should still acknowledge receipt
-    logger.warn('Failed to update transaction in database', { orderId, error: error.message });
-  } finally {
-    if (conn) conn.release();
+    logger.error('Paydestal verification error', error.message);
+    return null;
   }
 }
 
@@ -163,6 +190,93 @@ router.get('/verify/:orderId', async (req, res) => {
     logger.error('Payment verification error', { orderId: req.params.orderId, error: error.message });
     res.status(500).json({
       error: 'Failed to verify payment',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+// POST /payment/check-status/:orderId - Check and update payment status with Paydestal API
+router.post('/check-status/:orderId', async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    if (!orderId) {
+      return res.status(400).json({ error: 'Order ID is required' });
+    }
+
+    // Get transaction from database
+    let conn = await db.getConnection();
+    const rows = await conn.query('SELECT * FROM transactions WHERE orderId = ?', [orderId]);
+    
+    if (rows.length === 0) {
+      conn.release();
+      return res.status(404).json({
+        error: 'Order not found',
+      });
+    }
+
+    const transaction = rows[0];
+    conn.release();
+
+    // If already completed, return current status
+    if (transaction.status === 'completed') {
+      return res.json({
+        orderId: transaction.orderId,
+        status: transaction.status,
+        message: 'Payment already completed'
+      });
+    }
+
+    // Verify with Paydestal API
+    const verification = await verifyPaymentWithPaydestal(orderId);
+    
+    if (verification) {
+      // Update status if it changed
+      if (verification.status !== transaction.status) {
+        await updateTransactionStatus(orderId, verification.status, verification.reference);
+        
+        // Send notifications if payment completed
+        if (verification.status === 'completed') {
+          const orderData = {
+            orderId: orderId,
+            amount: verification.amount,
+            currency: 'NGN',
+            items: JSON.parse(transaction.orderItems || '[]')
+          };
+          
+          const customerData = {
+            customerName: transaction.customerName,
+            customerEmail: transaction.customerEmail,
+            phone: transaction.customerPhone || '',
+            street: transaction.street || '',
+            city: transaction.city || ''
+          };
+          
+          // Send receipts in parallel (non-blocking)
+          Promise.all([
+            sendCustomerReceipt(orderData, customerData),
+            sendKitchenNotification(orderData, customerData)
+          ]).catch(err => logger.error('Error sending WhatsApp messages', err.message));
+        }
+      }
+
+      res.json({
+        orderId: orderId,
+        status: verification.status,
+        paydestalStatus: verification.paydestalStatus,
+        amount: verification.amount,
+        reference: verification.reference
+      });
+    } else {
+      res.status(500).json({
+        error: 'Failed to verify payment with Paydestal'
+      });
+    }
+
+  } catch (error) {
+    logger.error('Payment status check error', { orderId: req.params.orderId, error: error.message });
+    res.status(500).json({
+      error: 'Failed to check payment status',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
