@@ -157,13 +157,13 @@ Step 5: Post-Payment
 ```
 ✅ NODE_ENV=production
 ✅ PORT=3001
-✅ CORS_ORIGIN=https://kitchenpastries.com
+✅ CORS_ORIGIN=https://kitchenpastriesnig.com
 ✅ PAYDESTAL_PUBLIC_KEY=PYD8rqwh2pb0am
-✅ PAYDESTAL_SECRET_KEY=••••••••••••••
+✅ PAYDESTAL_SECRET_KEY=SK-LIVE-tmk0ltsfccatrtmfo7ytcsugr6qi
 ✅ PAYDESTAL_MODE=production
 ✅ PAYDESTAL_SANDBOX_WEBHOOK_URL=https://...
 ✅ PAYDESTAL_LIVE_WEBHOOK_URL=https://...
-✅ POCKETBASE_URL=http://localhost:8090
+
 ⏳ WHATSAPP_INTEGRATION_ENABLED=true (ready)
 ⏳ WHATSAPP_INSTANCE_ID=••••••••••• (needs setup)
 ⏳ WHATSAPP_API_KEY=•••••••••••• (needs setup)
