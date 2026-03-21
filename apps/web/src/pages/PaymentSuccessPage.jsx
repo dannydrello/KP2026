@@ -8,12 +8,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import Header from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
 import { usePayment } from '@/contexts/PaymentContext.jsx';
+import { useCart } from '@/components/CartContext.jsx';
 import { apiServerClient } from '@/lib/apiServerClient';
 
 const PaymentSuccessPage = () => {
   const [searchParams] = useSearchParams();
   const paymentId = searchParams.get('paymentId') || searchParams.get('reference');
   const { verifyPayment } = usePayment();
+  const { clearCart } = useCart();
   
   const [status, setStatus] = useState('verifying'); // verifying, completed, failed, pending
   const [paymentDetails, setPaymentDetails] = useState(null);
@@ -66,6 +68,8 @@ const PaymentSuccessPage = () => {
       if (data.status === 'completed') {
         setStatus('completed');
         setPaymentDetails(data);
+        // Clear the cart after successful payment
+        clearCart();
         // Clear this order from pending
         const pendingOrders = JSON.parse(localStorage.getItem('pendingOrders') || '[]');
         const updated = pendingOrders.filter(o => o.orderId !== paymentId);
