@@ -129,7 +129,7 @@ const CartPage = () => {
                             <strong>Note:</strong> For deliveries, please contact us on WhatsApp at 
                             <a href="https://wa.me/2348069747505" className="text-blue-600 hover:text-blue-800 font-medium ml-1">
                               +234 806 974 7505
-                            </a> after placing your order.
+                            </a> <strong>before placing your order.</strong>
                           </p>
                         </div>
                       </div>

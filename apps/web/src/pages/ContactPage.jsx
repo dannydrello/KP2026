@@ -35,7 +35,7 @@ const ContactPage = () => {
 
   const handleWhatsAppContact = () => {
     const message = `Hello! I'd like to get in touch with Kitchen Pastries.`;
-    const whatsappUrl = `https://wa.me/2347061371437?text=${encodeURIComponent(message)}`;
+    const whatsappUrl = `https://wa.me/2348069747505?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };
 

@@ -107,6 +107,17 @@ const CheckoutForm = () => {
     // Generate order ID
     const orderId = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
+    // DEBUG: Log what we're sending to Paydestal
+    console.log('=== PAYDESTAL CHECKOUT DATA ===');
+    console.log('Customer Name:', formData.name);
+    console.log('Customer Email:', formData.email);
+    console.log('Customer Phone:', formData.phone);
+    console.log('Amount:', paymentAmount);
+    console.log('Order ID:', orderId);
+    console.log('Merchant Name: Kitchen Pastries');
+    console.log('Form Data:', formData);
+    console.log('=============================');
+
     // Create Paydestal config with ACTUAL values from form and cart
     const configOptions = {
       environment: paydestalConfig.environment,
@@ -115,9 +126,14 @@ const CheckoutForm = () => {
       customerEmail: formData.email,
       customerMobile: formData.phone.replace(/\D/g, '').replace(/^234/, '0'),
       customerName: formData.name,
+      merchantName: "Kitchen Pastries", // Business name for beneficiary display
+      businessName: "Kitchen Pastries", // Alternative field for business name
+      accountName: "Kitchen Pastries", // Account holder name
       currency: "NGN",
       reference: orderId,
     };
+
+    console.log('Paydestal Config Options:', configOptions);
 
     // Store order data for persistence and reconciliation
     const orderData = {
