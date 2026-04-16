@@ -70,12 +70,12 @@ const CheckoutForm = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  // This function opens popup IMMEDIATELY (synchronously) - exactly like working HTML
-  const handleSubmit = (e) => {
+  // Updated checkout flow: initiate payment via API, then redirect
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const paymentAmount = parseFloat(total);
-    
+
     // Validation
     if (cartItems.length === 0 || isNaN(paymentAmount) || paymentAmount <= 0) {
       toast({
@@ -95,47 +95,10 @@ const CheckoutForm = () => {
       return;
     }
 
-    if (!paydestalReady || !window.PaydestalInit || !paydestalConfig?.clientId) {
-      toast({
-        title: "Loading Payment",
-        description: "Payment gateway is loading. Please try again.",
-        variant: "destructive"
-      });
-      return;
-    }
-
     // Generate order ID
     const orderId = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    // DEBUG: Log what we're sending to Paydestal
-    console.log('=== PAYDESTAL CHECKOUT DATA ===');
-    console.log('Customer Name:', formData.name);
-    console.log('Customer Email:', formData.email);
-    console.log('Customer Phone:', formData.phone);
-    console.log('Amount:', paymentAmount);
-    console.log('Order ID:', orderId);
-    console.log('Merchant Name: Kitchen Pastries');
-    console.log('Form Data:', formData);
-    console.log('=============================');
-
-    // Create Paydestal config with ACTUAL values from form and cart
-    const configOptions = {
-      environment: paydestalConfig.environment,
-      clientId: paydestalConfig.clientId,
-      amount: Math.round(paymentAmount), // Amount in Naira (not kobo)
-      customerEmail: formData.email,
-      customerMobile: formData.phone.replace(/\D/g, '').replace(/^234/, '0'),
-      customerName: formData.name,
-      merchantName: "Kitchen Pastries", // Business name for beneficiary display
-      businessName: "Kitchen Pastries", // Alternative field for business name
-      accountName: "Kitchen Pastries", // Account holder name
-      currency: "NGN",
-      reference: orderId,
-    };
-
-    console.log('Paydestal Config Options:', configOptions);
-
-    // Store order data for persistence and reconciliation
+    // Prepare order data
     const orderData = {
       orderId,
       amount: paymentAmount,
@@ -153,55 +116,49 @@ const CheckoutForm = () => {
         quantity: item.quantity,
         selectedFlavor: item.selectedFlavor,
         cakeComment: item.cakeComment
-      })),
-      createdAt: new Date().toISOString()
+      }))
     };
-    
-    // CRITICAL: Save to localStorage for persistence (survives page reload)
-    // This ensures we never lose the order data
-    const pendingOrders = JSON.parse(localStorage.getItem('pendingOrders') || '[]');
-    pendingOrders.push(orderData);
-    localStorage.setItem('pendingOrders', JSON.stringify(pendingOrders));
-    
-    // Also save to sessionStorage for current session
-    sessionStorage.setItem('currentOrder', JSON.stringify(orderData));
 
-    // Try to create order in background with retry logic
-    const createOrder = async (retries = 3) => {
-      for (let i = 0; i < retries; i++) {
-        try {
-          const response = await apiServerClient.fetch('/payment/initiate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(orderData)
-          });
-          
-          if (response.ok) {
-            const result = await response.json();
-            console.log('Order created successfully:', result);
-            // Mark as synced in localStorage
-            orderData.synced = true;
-            orderData.transactionId = result.transactionId;
-            localStorage.setItem('pendingOrders', JSON.stringify(pendingOrders));
-            return result;
-          }
-        } catch (err) {
-          console.warn(`Order creation attempt ${i + 1} failed:`, err);
-          if (i < retries - 1) {
-            await new Promise(r => setTimeout(r, 1000 * (i + 1))); // Exponential backoff
-          }
-        }
+    try {
+      // Show loading state
+      toast({
+        title: "Processing Payment",
+        description: "Please wait while we prepare your payment...",
+      });
+
+      // Call API to initiate payment
+      const response = await apiServerClient.fetch('/payment/initiate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to initiate payment');
       }
-      console.warn('Order creation failed after retries. Will be reconciled via webhook.');
-    };
-    
-    // Start order creation (don't await - let it run in background)
-    createOrder();
 
-    // Open popup EXACTLY like working HTML
-    if (window.PaydestalInit) {
-      const { openPopup } = window.PaydestalInit.create(configOptions);
-      openPopup();
+      // Store pending payment info in sessionStorage
+      sessionStorage.setItem('pendingPayment', JSON.stringify({
+        orderId,
+        paymentUrl: result.paymentUrl,
+        timestamp: Date.now()
+      }));
+
+      // Don't clear cart yet - wait for payment verification
+      // clearCart(); // Removed - cart cleared after successful payment verification
+
+      // Redirect to payment gateway
+      window.location.href = result.paymentUrl;
+
+    } catch (error) {
+      console.error('Payment initiation failed:', error);
+      toast({
+        title: "Payment Failed",
+        description: error.message || "Failed to initiate payment. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 

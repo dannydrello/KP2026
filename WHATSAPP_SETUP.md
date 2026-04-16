@@ -26,10 +26,17 @@ We use **Green-API** (recommended for Nigeria/Africa):
 For **Green-API**:
 1. Go to https://green-api.com
 2. Sign up for free account
-3. Get:
-   - Instance ID
-   - API Key
-   - Business phone number (WhatsApp verified)
+3. Create a new instance
+4. Link your WhatsApp Business phone number:
+   - In the Green-API dashboard, go to your instance
+   - Click "Connect" or "Scan QR"
+   - Open WhatsApp on your business phone
+   - Scan the QR code displayed
+   - Wait for connection confirmation
+5. Get:
+   - Instance ID (from dashboard)
+   - API Key (from dashboard)
+   - Business phone number (the one you linked)
 
 ### Step 3: Update Environment Variables
 
@@ -178,11 +185,13 @@ Webhook responds successfully regardless of WhatsApp status.
 - **Solution**: Set to `true` in `.env`
 
 ### Messages not receiving
-- **Problem**: WhatsApp business account not properly set up
+- **Problem**: WhatsApp business account not properly set up or instance not connected
 - **Solution**: 
   1. Verify account is WhatsApp Business (not regular)
-  2. Check phone number is verified
-  3. Test with provider's dashboard first
+  2. Check phone number is verified and linked in Green-API dashboard
+  3. Ensure the instance shows "Connected" status
+  4. Test sending a message from the Green-API dashboard to your phone
+  5. Check if the phone number in `.env` matches the linked number
 
 ### Wrong phone numbers
 - **Problem**: Numbers formatted incorrectly
@@ -229,8 +238,9 @@ All webhook events logged in database:
 
 ### Pre-Launch Checklist
 
-- [ ] Green-API (or provider) account created
-- [ ] Business WhatsApp account verified
+- [ ] Green-API account created
+- [ ] WhatsApp Business instance created and connected via QR scan
+- [ ] Business WhatsApp account verified and linked
 - [ ] Instance ID obtained
 - [ ] API Key obtained
 - [ ] `.env` updated with credentials

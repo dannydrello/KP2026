@@ -26,7 +26,13 @@ function formatPhoneNumber(phone) {
 // Format receipt message
 function formatReceiptMessage(orderData, customerData) {
   const { orderId, amount, currency = 'NGN', items = [] } = orderData;
-  const { customerName, customerEmail, phone, street, city } = customerData;
+  const {
+    customerName = 'Unknown',
+    customerEmail = 'Not provided',
+    phone = 'Not provided',
+    street = 'Unknown',
+    city = 'Unknown'
+  } = customerData;
   
   const itemsList = items.map(item => {
     const flavorText = item.selectedFlavor ? ` (${item.selectedFlavor})` : '';
@@ -76,31 +82,48 @@ async function sendWhatsAppMessage(phoneNumber, message) {
   }
 
   try {
-    // Format phone number
     const formattedPhone = formatPhoneNumber(phoneNumber);
-    
-    logger.info('Sending WhatsApp message', { to: formattedPhone });
 
-    // Using Evolution API or similar WhatsApp service
-    // Adjust the endpoint based on your WhatsApp service provider
+    logger.info('Sending WhatsApp message', { to: formattedPhone, rawPhone: phoneNumber });
+
+    const payload = {
+      chatId: `${formattedPhone}@c.us`,
+      message,
+    };
+
+    logger.debug('WhatsApp API payload', {
+      endpoint: `https://api.greenapi.com/waInstance${WHATSAPP_INSTANCE_ID}/sendMessage/${WHATSAPP_API_KEY}`,
+      payload,
+    });
+
     const response = await fetch(
-      `https://api.greenapi.com/waInstance${WHATSAPP_INSTANCE_ID}/sendMessage/${WHATSAPP_API_KEY}`,
+      `https://api.green-api.com/waInstance${WHATSAPP_INSTANCE_ID}/sendMessage/${WHATSAPP_API_KEY}`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          chatId: `${formattedPhone}@c.us`,
-          message: message,
-        }),
+        body: JSON.stringify(payload),
       }
     );
 
     if (!response.ok) {
-      const errorData = await response.text();
-      logger.error('WhatsApp API error', { status: response.status, error: errorData });
-      return { success: false, reason: `WhatsApp API error: ${response.status}` };
+      const errorText = await response.text();
+      let errorData = errorText;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch (parsingError) {
+        // Keep text if JSON parse fails
+      }
+
+      logger.error('WhatsApp API error', {
+        status: response.status,
+        to: formattedPhone,
+        payload,
+        error: errorData,
+      });
+
+      return { success: false, reason: `WhatsApp API error: ${response.status}`, details: errorData };
     }
 
     const data = await response.json();
@@ -147,7 +170,12 @@ export async function sendKitchenNotification(orderData, customerData) {
 
   try {
     const { orderId, amount, items = [] } = orderData;
-    const { customerName, phone, street, city } = customerData;
+    const {
+      customerName = 'Unknown',
+      phone = 'Not provided',
+      street = 'Unknown',
+      city = 'Unknown'
+    } = customerData;
     
     const itemsList = items.map(item => {
       const flavorText = item.selectedFlavor ? ` (${item.selectedFlavor})` : '';

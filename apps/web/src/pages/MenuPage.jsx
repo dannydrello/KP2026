@@ -37,10 +37,8 @@ const MenuPage = () => {
         { id: 10, name: 'Yougurt', category: 'drinks', price: '₦2625', description: 'Greek yogurt parfait', image: '/menu/yogurt.jpg', flavors: ['Vanilla', 'Strawberry', 'Banana'] },
         // additional cafe items previously listed further down
         { id: 11, name: 'Sandwitch', category: 'pastries', price: '₦2625', description: 'Sandwitch', image: '/menu/CHICKENSANDWITCH.jpg' },
-        { id: 12, name: 'Milkshake', category: 'drinks', price: '₦4095', description: 'Chill sweet and healthy Milkshake', image: '/menu/milkshake.jpg' },
-        
-        { id: 13, name: 'Bannana Loaf', category: 'pastries', price: '₦5775', description: 'Super-moist, homemade banana bread packed with ripe bananas and warm spices. A comforting, timeless treat perfect with coffee.', image: '/menu/banannaloaf.jpg' },
-        { id: 14, name: 'Ice cream cake', category: 'cakes', price: '₦5250', description: 'Delicious ice cream cake', image: '/menu/Brownie cup.png' },
+        { id: 12, name: 'Milkshake', category: 'drinks', price: '₦4095', description: 'Chill sweet and healthy Milkshake', image: '/menu/MILKSHAKE.jpg' },
+        { id: 9, name: 'Zobo', category: 'drinks', price: '₦4095', description: 'Chill sweet and healthy Zobo', image: '/menu/zobo.jpeg' },       
         { id: 16, name: 'chocolate waffles', category: 'pastries', price: '₦3360', description: 'Pack of soft, chocolate waffles', image: '/menu/waffles.jpg' },
         { id: 17, name: 'Milky Bread', category: 'pastries', price: '₦2100', description: 'Soft milky bread', image: '/menu/milkbread.jpeg' },
         { id: 18, name: 'Bread rolls', category: 'pastries', price: '₦1365', description: 'Sweet bread rolls', image: '/menu/breadrolls.jpeg' },
@@ -76,7 +74,7 @@ const MenuPage = () => {
         { id: 53, name: 'Granola', category: 'pastries', price: '₦7350', description: 'Crunchy and healthy granola', image: '/menu/granola.jpg' },    
         { id: 55, name: 'Puff pot', category: 'pastries', price: '₦1785', description: 'Creamy puff pot', image: '/menu/puffpots.jpg' },
         { id: 22, name: 'Ghana buns (3)', category: 'pastries', price: '₦1050', description: 'Delicious Ghana buns', image: '/menu/GHANA_BUNS.png' },
-        { id: 56, name: '6" Ready to go cake', category: 'cakes', price: '₦7245', description: 'Freshly made and Iced', image: '/menu/8inchcake.jpg' },      
+        { id: 56, name: '6" Ready to go cake', category: 'cakes', price: '₦7245', description: 'Freshly made and Iced', image: '/menu/6cake.jpeg' },      
         { id: 58, name: '8"  Ready to go cake', category: 'cakes', price: '₦24525', description: 'Freshly made and Iced', image: '/menu/8inchcake.jpg' },
         { id: 59, name: 'Muffins', category: 'pastries', price: '₦3150', description: 'Fresh baked muffins', image: '/menu/muffins.jpeg', flavors: ['Chocolate', 'Oreos', 'Plain'] },
         { id: 60, name: '10" Ready to go Cake', category: 'cakes', price: '₦29400', description: 'Freshly made and Iced', image: '/menu/10inchcake.jpg' },
@@ -88,7 +86,7 @@ const MenuPage = () => {
         { id: 66, name: 'Cake slice box', category: 'cakes', price: '₦3675', description: 'Box of cake slices', image: '/menu/cakesliceinabox.jpg' },
         { id: 75, name: 'Plantain loaf', category: 'pastries', price: '₦5827.50', description: 'Moist and delicious plantain loaf', image: '/menu/plantaincake.jpg' },
         
-        { id: 67, name: 'Chicken Salad', category: 'pastries', price: '₦5775', description: 'Fresh and healthy salad', image: '/menu/chickensalad.jpg' },
+        { id: 67, name: 'Chicken Salad', category: 'pastries', price: '₦5775', description: 'Fresh and healthy salad', image: '/menu/salad.jpeg' },
        
         { id: 69, name: 'Tripple delight cake', category: 'cakes', price: '₦2940', description: 'Decadent triple-layer cake', image: '/menu/tripledelight.jpg' },
         { id: 77, name: 'Coconut Bread', category: 'pastries', price: '₦1543.50', description: 'Delicious coconut bread', image: '/menu/coconutbread.jpeg' },    

@@ -11,6 +11,82 @@ const PAYDESTAL_PUBLIC_KEY = process.env.PAYDESTAL_PUBLIC_KEY;
 const PAYDESTAL_SECRET_KEY = process.env.PAYDESTAL_SECRET_KEY;
 const PAYDESTAL_MODE = process.env.PAYDESTAL_MODE || 'sandbox';
 
+// Constants for timeout and retry configuration
+const REQUEST_TIMEOUT = 30000; // 30 seconds
+const MAX_RETRIES = 3;
+const RETRY_DELAYS = [1000, 2000, 4000]; // Exponential backoff
+
+// Generate unique idempotency key for payment requests
+function generateIdempotencyKey(orderId) {
+  const timestamp = Date.now();
+  const randomBytes = crypto.randomBytes(4).toString('hex');
+  return `${orderId}-${timestamp}-${randomBytes}`;
+}
+
+// Fetch with retry logic and exponential backoff
+async function fetchWithRetry(url, options, retries = MAX_RETRIES) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      // Don't retry on client errors (4xx) except 429 (rate limit)
+      if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+        return response;
+      }
+
+      // Don't retry on successful responses
+      if (response.ok) {
+        return response;
+      }
+
+      // Retry on server errors (5xx) or rate limit
+      if (attempt < retries) {
+        const delay = RETRY_DELAYS[attempt] || 4000;
+        logger.warn(`Request failed (attempt ${attempt + 1}/${retries + 1}), retrying in ${delay}ms`, {
+          url,
+          status: response.status,
+          statusText: response.statusText
+        });
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+
+      return response;
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        logger.error('Request timeout', { url, attempt: attempt + 1 });
+        if (attempt < retries) {
+          const delay = RETRY_DELAYS[attempt] || 4000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        throw new Error('Request timeout after all retries');
+      }
+
+      // Retry on network errors
+      if (attempt < retries) {
+        const delay = RETRY_DELAYS[attempt] || 4000;
+        logger.warn(`Network error (attempt ${attempt + 1}/${retries + 1}), retrying in ${delay}ms`, {
+          url,
+          error: error.message
+        });
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+
+      throw error;
+    }
+  }
+}
+
 // Helper function to verify payment status with Paydestal API
 async function verifyPaymentWithPaydestal(transactionReference) {
   try {
@@ -78,7 +154,7 @@ router.get('/config', async (req, res) => {
   }
 });
 
-// POST /payment/initiate - Store order and prepare for payment
+// POST /payment/initiate - Initiate payment with Paydestal and return payment URL
 router.post('/initiate', async (req, res) => {
   try {
     const { orderId, amount, currency, customerEmail, customerName, customerPhone, street, city, country, orderItems } = req.body;
@@ -90,12 +166,79 @@ router.post('/initiate', async (req, res) => {
       });
     }
 
+    // Generate idempotency key
+    const idempotencyKey = generateIdempotencyKey(orderId);
+
+    // Prepare Paydestal payment request
+    const baseUrl = PAYDESTAL_MODE === 'live' ? 'https://api.paydestal.com' : 'https://devbox.paydestal.com';
+    const paymentUrl = `${baseUrl}/api/payments`;
+
+    const paymentData = {
+      amount: parseFloat(amount),
+      currency: currency || 'NGN',
+      customerEmail,
+      customerName,
+      customerPhone: customerPhone || '',
+      reference: orderId,
+      callbackUrl: `${process.env.BASE_URL || 'http://localhost:3000'}/payment/callback`,
+      returnUrl: `${process.env.BASE_URL || 'http://localhost:3000'}/payment/success?orderId=${orderId}`,
+      description: `Order ${orderId}`,
+      metadata: {
+        orderItems: JSON.stringify(orderItems),
+        street: street || '',
+        city: city || '',
+        country: country || 'NG'
+      }
+    };
+
+    logger.info('Initiating payment with Paydestal', { orderId, amount, paymentUrl });
+
+    // Call Paydestal API with retry logic
+    const response = await fetchWithRetry(paymentUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${PAYDESTAL_SECRET_KEY}`,
+        'X-Idempotency-Key': idempotencyKey
+      },
+      body: JSON.stringify(paymentData)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error('Paydestal API error', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText
+      });
+
+      // Handle specific error codes
+      if (response.status === 503) {
+        return res.status(503).json({
+          error: 'Payment gateway temporarily unavailable. Please try again later.'
+        });
+      }
+
+      return res.status(response.status).json({
+        error: 'Failed to initiate payment',
+        details: response.status === 400 ? 'Invalid payment data' : 'Payment gateway error'
+      });
+    }
+
+    const paymentResponse = await response.json();
+    logger.info('Paydestal payment initiated', {
+      orderId,
+      paydestalReference: paymentResponse.reference,
+      paymentUrl: paymentResponse.redirect_url || paymentResponse.payment_url || paymentResponse.url
+    });
+
+    // Store order in database
+    let conn;
     try {
-      // Store order in MariaDB
-      let conn = await db.getConnection();
+      conn = await db.getConnection();
       const result = await conn.query(
-        `INSERT INTO transactions 
-         (orderId, status, amount, currency, customerEmail, customerName, customerPhone, street, city, country, orderItems, paydestal_reference) 
+        `INSERT INTO transactions
+         (orderId, status, amount, currency, customerEmail, customerName, customerPhone, street, city, country, orderItems, paydestal_reference)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           orderId,
@@ -109,56 +252,77 @@ router.post('/initiate', async (req, res) => {
           city || '',
           country || 'NG',
           JSON.stringify(orderItems),
-          ''
+          paymentResponse.reference || orderId
         ]
       );
-      conn.release();
 
-      logger.info('Order created in database', { orderId, transactionId: result.insertId });
+      logger.info('Order stored in database', { orderId, transactionId: result.insertId });
 
+      // Return payment URL to client
       res.json({
         success: true,
         orderId,
-        transactionId: result.insertId,
+        paymentUrl: paymentResponse.redirect_url || paymentResponse.payment_url || paymentResponse.url,
+        reference: paymentResponse.reference || orderId
       });
+
     } catch (dbError) {
-      // Log error but don't fail - payment can still proceed
-      // Webhook will handle reconciliation
-      logger.error('Failed to store order in database', { 
-        orderId, 
-        error: dbError.message,
-        hint: 'Make sure the "transactions" table exists in MariaDB'
+      logger.error('Failed to store order in database', {
+        orderId,
+        errorCode: dbError.code,
+        errorMessage: dbError.message,
+        sqlMessage: dbError.sqlMessage
       });
 
-      // Return success anyway so payment can proceed
+      // Still return payment URL even if DB storage fails
       res.json({
         success: true,
         orderId,
-        transactionId: null,
-        warning: 'Order not stored in database - will be reconciled via webhook',
-        error: dbError.message
+        paymentUrl: paymentResponse.redirect_url || paymentResponse.payment_url || paymentResponse.url,
+        reference: paymentResponse.reference || orderId,
+        warning: 'Order stored temporarily, may not persist if payment fails'
       });
+    } finally {
+      if (conn) {
+        try {
+          conn.release();
+        } catch (releaseError) {
+          logger.warn('Failed to release DB connection', { error: releaseError.message });
+        }
+      }
     }
   } catch (error) {
     logger.error('Payment initiation error', error.message);
+
+    if (error.message.includes('timeout')) {
+      return res.status(504).json({
+        error: 'Payment gateway timeout. Please try again.'
+      });
+    }
+
     res.status(500).json({
       error: 'Failed to initiate payment',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
 
-// GET /payment/verify/:orderId - Verify payment status from database
+// GET /payment/verify/:orderId - Verify payment status with retry logic
 router.get('/verify/:orderId', async (req, res) => {
-  try {
-    const { orderId } = req.params;
+  const maxAttempts = 5;
+  const delays = [1000, 2000, 4000, 8000]; // Exponential backoff
 
-    if (!orderId) {
-      return res.status(400).json({ error: 'Order ID is required' });
-    }
-
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
+      const { orderId } = req.params;
+
+      if (!orderId) {
+        return res.status(400).json({ error: 'Order ID is required' });
+      }
+
+      // Get transaction from database
       let conn = await db.getConnection();
-      const rows = await conn.query('SELECT * FROM transactions WHERE orderId = ?', [orderId]);
+      const rows = await conn.query('SELECT * FROM transactions WHERE orderId = ? OR paydestal_reference = ?', [orderId, orderId]);
       conn.release();
 
       if (rows.length === 0) {
@@ -169,29 +333,80 @@ router.get('/verify/:orderId', async (req, res) => {
 
       const transaction = rows[0];
 
-      logger.info('Order status retrieved', { orderId, status: transaction.status });
+      // If payment is already completed or failed, return immediately
+      if (transaction.status === 'completed') {
+        return res.json({
+          orderId: transaction.orderId,
+          status: transaction.status,
+          amount: transaction.amount,
+          currency: transaction.currency,
+          paydestal_reference: transaction.paydestal_reference,
+        });
+      }
 
-      res.json({
+      if (transaction.status === 'failed') {
+        return res.json({
+          orderId: transaction.orderId,
+          status: transaction.status,
+          amount: transaction.amount,
+          currency: transaction.currency,
+          paydestal_reference: transaction.paydestal_reference,
+        });
+      }
+
+      // Verify with Paydestal API
+      const referenceToCheck = transaction.paydestal_reference || orderId;
+      const verification = await verifyPaymentWithPaydestal(referenceToCheck);
+
+      if (verification) {
+        // Update status if it changed
+        if (verification.status !== transaction.status) {
+          await updateTransactionStatus(orderId, verification.status, verification.reference);
+        }
+
+        return res.json({
+          orderId: transaction.orderId,
+          status: verification.status,
+          amount: verification.amount || transaction.amount,
+          currency: transaction.currency,
+          paydestal_reference: verification.reference || transaction.paydestal_reference,
+        });
+      }
+
+      // If verification failed and this is not the last attempt, wait and retry
+      if (attempt < maxAttempts - 1) {
+        await new Promise(resolve => setTimeout(resolve, delays[attempt] || 8000));
+        continue;
+      }
+
+      // Return current status if all verification attempts failed
+      return res.json({
         orderId: transaction.orderId,
         status: transaction.status,
         amount: transaction.amount,
         currency: transaction.currency,
         paydestal_reference: transaction.paydestal_reference,
       });
+
     } catch (error) {
-      if (error.code === 'ER_NO_SUCH_TABLE') {
-        return res.status(404).json({
-          error: 'Order not found',
-        });
+      logger.error('Payment verification error', {
+        orderId: req.params.orderId,
+        attempt: attempt + 1,
+        error: error.message
+      });
+
+      // If this is not the last attempt, wait and retry
+      if (attempt < maxAttempts - 1) {
+        await new Promise(resolve => setTimeout(resolve, delays[attempt] || 8000));
+        continue;
       }
-      throw error;
+
+      // Return error on last attempt
+      return res.status(500).json({
+        error: 'Failed to verify payment',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      });
     }
-  } catch (error) {
-    logger.error('Payment verification error', { orderId: req.params.orderId, error: error.message });
-    res.status(500).json({
-      error: 'Failed to verify payment',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined,
-    });
   }
 });
 
@@ -289,13 +504,22 @@ router.post('/check-status/:orderId', async (req, res) => {
 router.post('/webhook', async (req, res) => {
   try {
     const { event, data } = req.body;
-    const nmac = req.headers.nmac;
+    const nmac = req.headers.nmac || req.headers['x-nmac'] || req.headers['X-NMAC'];
 
-    logger.info('Received Paydestal webhook', { event, payReference: data?.payReference });
+    logger.info('Received Paydestal webhook', {
+      event,
+      payReference: data?.payReference,
+      nmacProvided: !!nmac,
+      nmacValue: nmac,
+      payload: data
+    });
 
     // Verify webhook signature using HMAC-SHA512 with payReference
     if (!verifyWebhookSignature(data?.payReference, nmac)) {
-      logger.warn('Invalid webhook signature');
+      logger.warn('Invalid webhook signature', {
+        payReference: data?.payReference,
+        nmacProvided: nmac,
+      });
       return res.status(401).json({ error: 'Invalid webhook signature' });
     }
 
@@ -308,11 +532,14 @@ router.post('/webhook', async (req, res) => {
         // Send WhatsApp receipts
         try {
           let conn = await db.getConnection();
-          const rows = await conn.query('SELECT * FROM transactions WHERE orderId = ?', [data.payReference]);
+          const rows = await conn.query(
+            'SELECT * FROM transactions WHERE orderId = ? OR paydestal_reference = ?',
+            [data.payReference, data.payReference]
+          );
           conn.release();
 
           if (rows.length === 0) {
-            logger.warn('Transaction not found for WhatsApp', { payReference: data.payReference });
+            logger.warn('Transaction not found for WhatsApp', { payReference: data.payReference, query: 'orderId OR paydestal_reference' });
             return;
           }
 
@@ -381,6 +608,34 @@ function verifyWebhookSignature(payReference, providedNmac) {
   } catch (error) {
     logger.error('Webhook signature verification error', error.message);
     return false;
+  }
+}
+
+// Ensure transaction status is updated in the database
+async function updateTransactionStatus(orderIdOrReference, status, paydestalReference) {
+  let conn;
+  try {
+    conn = await db.getConnection();
+
+    // Update existing transaction by orderId or paydestal_reference
+    await conn.query(
+      'UPDATE transactions SET status = ?, paydestal_reference = ? WHERE orderId = ? OR paydestal_reference = ?',
+      [status, paydestalReference, orderIdOrReference, orderIdOrReference]
+    );
+
+    // If no existing row, insert a minimal record (safe-guard)
+    await conn.query(
+      `INSERT INTO transactions (orderId, status, amount, currency, customerEmail, customerName, customerPhone, street, city, country, orderItems, paydestal_reference)
+       SELECT ?, ?, 0, 'NGN', '', '', '', '', '', 'NG', '[]', ?
+       WHERE NOT EXISTS (SELECT 1 FROM transactions WHERE orderId = ? OR paydestal_reference = ?)`,
+      [orderIdOrReference, status, paydestalReference, orderIdOrReference, orderIdOrReference]
+    );
+
+    conn.release();
+  } catch (error) {
+    if (conn) conn.release();
+    logger.error('updateTransactionStatus error', error.message);
+    throw error;
   }
 }
 

@@ -43,8 +43,8 @@ const ContactPage = () => {
     {
       icon: Phone,
       title: 'Phone',
-      content: '+234 706 137 1437',
-      link: 'tel:++2347061371437'
+      content: '+234 806 974 7505',
+      link: 'tel:+2348069747505'
     },
     {
       icon: Mail,
@@ -206,25 +206,24 @@ const ContactPage = () => {
                 </Card>
               </motion.div>
 
-              {/* Map (fallback to link instead of embed) */}
+              {/* Map */}
               <motion.div
                 initial={{ opacity: 0, x: 30 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.8 }}
               >
-                <Card className="rounded-xl shadow-soft-lg border-border h-full">
-                  <CardContent className="p-0 h-full flex items-center justify-center">
-                    <a
-                      href="https://maps.google.com/?q=6.448703426190731,7.532209329452964"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full h-full flex items-center justify-center bg-gray-100 text-center"
-                    >
-                      <span className="text-primary font-semibold">
-                        Open map in Google Maps
-                      </span>
-                    </a>
+                <Card className="rounded-xl shadow-soft-lg border-border h-full overflow-hidden">
+                  <CardContent className="p-0 h-full">
+                    <iframe
+                      title="Kitchen Pastries Location"
+                      width="100%"
+                      height="100%"
+                      style={{ border: 0, minHeight: '400px' }}
+                      loading="lazy"
+                      allowFullScreen=""
+                      src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3966.4523789234567!2d7.532209329452964!3d6.448703426190731!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x1044b8d0e0e0e0e1%3A0x1a1a1a1a1a1a1a1a!2s8%20Onitsha%20Crescent%2C%20Independence%20Layout%2C%20Enugu!5e0!3m2!1sen!2sng!4v1234567890"
+                    />
                   </CardContent>
                 </Card>
               </motion.div>
