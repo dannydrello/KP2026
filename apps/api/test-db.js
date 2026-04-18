@@ -1,7 +1,7 @@
 // Wait a bit for server to start
 setTimeout(async () => {
   const testData = {
-    orderId: 'TEST-' + Date.now(),
+    orderId: 'TEST' + Math.floor(Math.random() * 1000000).toString().slice(0, 11),
     amount: 1500,
     currency: 'NGN',
     customerEmail: 'test@example.com',

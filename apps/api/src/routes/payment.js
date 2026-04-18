@@ -9,7 +9,7 @@ const router = express.Router();
 
 const PAYDESTAL_PUBLIC_KEY = process.env.PAYDESTAL_PUBLIC_KEY;
 const PAYDESTAL_SECRET_KEY = process.env.PAYDESTAL_SECRET_KEY;
-const PAYDESTAL_MODE = process.env.PAYDESTAL_MODE || 'sandbox';
+const PAYDESTAL_MODE = process.env.PAYDESTAL_MODE || 'live';
 
 // Constants for timeout and retry configuration
 const REQUEST_TIMEOUT = 30000; // 30 seconds
@@ -171,24 +171,25 @@ router.post('/initiate', async (req, res) => {
 
     // Prepare Paydestal payment request
     const baseUrl = PAYDESTAL_MODE === 'live' ? 'https://api.paydestal.com' : 'https://devbox.paydestal.com';
-    const paymentUrl = `${baseUrl}/api/payments`;
+    const callbackUrl = PAYDESTAL_MODE === 'live' 
+      ? process.env.PAYDESTAL_LIVE_WEBHOOK_URL || 'https://kp-2026-web.vercel.app/api/payment/webhook'
+      : process.env.PAYDESTAL_SANDBOX_WEBHOOK_URL || 'http://localhost:3000/api/payment/webhook';
+    
+    const paymentUrl = `${baseUrl}/pay/api/v1/card/init?clientId=${PAYDESTAL_PUBLIC_KEY}`;
 
     const paymentData = {
+      reference: orderId,
       amount: parseFloat(amount),
       currency: currency || 'NGN',
-      customerEmail,
+      callbackUrl,
       customerName,
+      customerEmail,
       customerPhone: customerPhone || '',
-      reference: orderId,
-      callbackUrl: `${process.env.BASE_URL || 'http://localhost:3000'}/payment/callback`,
-      returnUrl: `${process.env.BASE_URL || 'http://localhost:3000'}/payment/success?orderId=${orderId}`,
-      description: `Order ${orderId}`,
-      metadata: {
-        orderItems: JSON.stringify(orderItems),
-        street: street || '',
-        city: city || '',
-        country: country || 'NG'
-      }
+      sourceUrl: PAYDESTAL_MODE === 'live' ? 'https://kp-2026-web.vercel.app' : 'http://localhost:3000',
+      city: city || '',
+      country: country || 'NGA',
+      address: street || '',
+      stateProvinceCode: 'FC'
     };
 
     logger.info('Initiating payment with Paydestal', { orderId, amount, paymentUrl });
@@ -638,5 +639,22 @@ async function updateTransactionStatus(orderIdOrReference, status, paydestalRefe
     throw error;
   }
 }
+
+// GET /payment/check-orders - Check recent test orders in database
+router.get('/check-orders', async (req, res) => {
+  try {
+    let conn = await db.getConnection();
+    const rows = await conn.query(
+      'SELECT orderId, status, amount, customerName, customerPhone, created_at FROM transactions WHERE orderId LIKE ? ORDER BY created_at DESC LIMIT 20',
+      ['TEST-%']
+    );
+    conn.release();
+
+    res.json(rows);
+  } catch (error) {
+    logger.error('check-orders error', error.message);
+    res.status(500).json({ error: 'Database error', details: error.message });
+  }
+});
 
 export default router;
