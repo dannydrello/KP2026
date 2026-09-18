@@ -69,7 +69,7 @@ const CartPage = () => {
                               {item.selectedFlavor && (
                                 <p className="text-sm text-muted-foreground mt-1">Flavor: {item.selectedFlavor}</p>
                               )}
-                              <p className="text-primary font-semibold mt-1 group-hover:text-gray-900 transition-colors">{item.price}</p>
+                              <p className="text-primary font-semibold mt-1 group-hover:text-gray-900 transition-colors">{formatCurrency(item.price)}</p>
                             </div>
                             <div className="flex items-center gap-4">
                               <div className="flex items-center border border-border rounded-lg overflow-hidden bg-background/80 backdrop-blur-sm">
@@ -116,6 +116,10 @@ const CartPage = () => {
                         <div className="flex justify-between text-foreground">
                           <span className="text-muted-foreground">Subtotal</span>
                           <span className="font-medium">{formatCurrency(subtotal)}</span>
+                        </div>
+                        <div className="flex justify-between text-foreground">
+                          <span className="text-muted-foreground">VAT (3%)</span>
+                          <span className="font-medium">{formatCurrency(tax)}</span>
                         </div>
                       </div>
 

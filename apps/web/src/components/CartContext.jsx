@@ -31,12 +31,14 @@ export const CartProvider = ({ children }) => {
       return sum + (price * item.quantity);
     }, 0);
     
-    // No tax or shipping fees
-    const total = subtotal;
+    // No shipping fees; 3% VAT included
+    const VAT_RATE = 0.03;
+    const tax = subtotal * VAT_RATE;
+    const total = subtotal + tax;
 
     setTotals({
       subtotal: subtotal.toFixed(2),
-      tax: '0.00',
+      tax: tax.toFixed(2),
       shipping: '0.00',
       total: total.toFixed(2)
     });

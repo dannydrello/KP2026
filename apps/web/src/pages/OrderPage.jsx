@@ -106,7 +106,7 @@ const OrderPage = () => {
                                 {item.cakeComment && (
                                   <span className="text-xs text-muted-foreground italic">Cake message: "{item.cakeComment}"</span>
                                 )}
-                                <span className="text-xs text-muted-foreground mt-1">{item.price} each</span>
+                                <span className="text-xs text-muted-foreground mt-1">{formatCurrency(item.price)} each</span>
                               </div>
                             </div>
                             <span className="font-semibold text-foreground whitespace-nowrap ml-4 mt-0.5">
@@ -121,6 +121,10 @@ const OrderPage = () => {
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Subtotal</span>
                           <span className="font-medium text-foreground text-right">{formatCurrency(subtotal)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">VAT (3%)</span>
+                          <span className="font-medium text-foreground text-right">{formatCurrency(tax)}</span>
                         </div>
                       </div>
 
