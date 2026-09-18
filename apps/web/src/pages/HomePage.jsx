@@ -10,13 +10,51 @@ import Footer from '@/components/Footer.jsx';
 import WhyChooseUs from '@/components/WhyChooseUs.jsx';
 import { useCart } from '@/components/CartContext.jsx';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabaseClient';
+
+const formatPrice = (price) => `₦${Number(price).toLocaleString('en-NG')}`;
+
+// Curated homepage copy, keyed by the real product id so price/availability always
+// comes from the live catalog (and stays in sync with admin edits) instead of drifting
+// out of sync with a second, hardcoded price.
+const FEATURED_PRODUCT_COPY = {
+  58: { name: '8 INCH CAKE', description: 'Buttery, flaky layers of perfection', image: '/menu/8inchcake.jpg', category: 'Cakes' },
+  38: { name: 'CRISPY CHICKEN BURGER', description: 'Crispy chicken with fresh vegetables and special sauce', image: '/menu/CRISPY_CHICKEN_BURGER.png', category: 'Snack' },
+  12: { name: 'MILKSHAKE', description: 'Rich, creamy, and perfectly blended', image: '/menu/milkshake.jpg', category: 'drinks' },
+  44: { name: 'SCOTCHED EGG', description: 'Light, fluffy, and beautifully decorated', image: '/menu/SCOTCHED_EGG.png', category: 'Snack' },
+};
 
 const HomePage = () => {
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
   const [quantities, setQuantities] = useState({});
   const [itemsPerView, setItemsPerView] = useState(1);
+  const [featuredProducts, setFeaturedProducts] = useState([]);
   const { addToCart } = useCart();
   const { toast } = useToast();
+
+  useEffect(() => {
+    const loadFeatured = async () => {
+      const ids = Object.keys(FEATURED_PRODUCT_COPY).map(Number);
+      const { data, error } = await supabase.from('products').select('id,price,active').in('id', ids);
+
+      if (error) {
+        console.error('Failed to load featured products', error.message);
+        return;
+      }
+
+      const merged = ids
+        .map((id) => {
+          const product = (data || []).find((p) => p.id === id);
+          if (!product) return null;
+          return { id, price: Number(product.price), outOfOrder: !product.active, ...FEATURED_PRODUCT_COPY[id] };
+        })
+        .filter(Boolean);
+
+      setFeaturedProducts(merged);
+    };
+
+    loadFeatured();
+  }, []);
 
   // Auto-rotate testimonials every 5 seconds
   useEffect(() => {
@@ -37,41 +75,6 @@ const HomePage = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-
-  const featuredProducts = [
-    {
-      id: 1,
-      name: '8 INCH CAKE',
-      description: 'Buttery, flaky layers of perfection',
-      price: '₦15000.00',
-      image: '/menu/8inchcake.jpg',
-      category: 'Cakes'
-    },
-    {
-      id: 2,
-      name: 'CRISPY CHICKEN BURGER',
-      description: 'Crispy chicken with fresh vegetables and special sauce',
-      price: '₦6615',
-      image: '/menu/CRISPY_CHICKEN_BURGER.png',
-      category: 'Snack'
-    },
-    {
-      id: 3,
-      name: 'MILKSHAKE',
-      description: 'Rich, creamy, and perfectly blended',
-      price: '₦5000.00',
-      image: '/menu/milkshake.jpg',
-      category: 'drinks'
-    },
-    {
-      id: 4,
-      name: 'SCOTCHED EGG',
-      description: 'Light, fluffy, and beautifully decorated',
-      price: '₦2100.00',
-      image: '/menu/SCOTCHED_EGG.png',
-      category: 'Snack'
-    }
-  ];
 
   const newTestimonials = [
     {
@@ -123,6 +126,7 @@ const HomePage = () => {
   };
 
   const handleAddToCart = (product) => {
+    if (product.outOfOrder) return;
     const qty = quantities[product.id] || 1;
     addToCart(product, qty);
     toast({
@@ -251,7 +255,7 @@ const HomePage = () => {
                   viewport={{ once: true }}
                   transition={{ duration: 0.6, delay: index * 0.1 }}
                 >
-                  <Card className="overflow-hidden rounded-xl shadow-soft-lg hover:shadow-soft-xl transition-all duration-300 ease-in-out hover:scale-[1.03] hover:bg-[#FFC600] border-border flex flex-col h-full group">
+                  <Card className={`overflow-hidden rounded-xl shadow-soft-lg border-border flex flex-col h-full group ${product.outOfOrder ? 'opacity-70' : 'hover:shadow-soft-xl transition-all duration-300 ease-in-out hover:scale-[1.03] hover:bg-[#FFC600]'}`}>
                     <div className="relative h-64 overflow-hidden">
                       <img
                         src={product.image}
@@ -260,46 +264,59 @@ const HomePage = () => {
                           e.target.onerror = null;
                           e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDQwMCA0MDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSI0MDAiIGZpbGw9IiNlZWUiIC8+CiAgPHRleHQgeD0iMjAwIiB5PSIyMjAiIGZvbnQtc2l6ZT0iNDgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM4ODgiPkltYWdlIG5vdCBmb3VuZDwvdGV4dD4KPC9zdmc+';
                         }}
-                        className="w-full h-full object-cover transition-smooth group-hover:scale-110"
+                        className={`w-full h-full object-cover transition-smooth ${product.outOfOrder ? 'grayscale' : 'group-hover:scale-110'}`}
                       />
                       <div className="absolute top-4 right-4 bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-semibold shadow-soft">
                         {product.category}
                       </div>
+                      {product.outOfOrder && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                          <span className="bg-destructive text-destructive-foreground px-4 py-1.5 rounded-full text-sm font-bold uppercase tracking-wide shadow-soft">
+                            Out of Order
+                          </span>
+                        </div>
+                      )}
                     </div>
                     <CardContent className="p-6 flex-1 flex flex-col">
                       <h3 className="text-xl font-bold text-foreground group-hover:text-gray-900 mb-2 transition-colors">{product.name}</h3>
                       <p className="text-sm text-muted-foreground group-hover:text-gray-800 mb-4 flex-1 transition-colors">{product.description}</p>
 
                       <div className="flex flex-col gap-4 mt-auto">
-                        <span className="text-2xl font-bold text-primary group-hover:text-gray-900 transition-colors">{product.price}</span>
+                        <span className="text-2xl font-bold text-primary group-hover:text-gray-900 transition-colors">{formatPrice(product.price)}</span>
 
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center border border-border rounded-lg overflow-hidden bg-background/80 backdrop-blur-sm">
-                            <button
-                              onClick={() => handleQuantityChange(product.id, -1)}
-                              className="p-2 hover:bg-secondary transition-smooth text-foreground"
-                            >
-                              <Minus className="w-4 h-4" />
-                            </button>
-                            <span className="w-8 text-center font-medium text-foreground">
-                              {quantities[product.id] || 1}
-                            </span>
-                            <button
-                              onClick={() => handleQuantityChange(product.id, 1)}
-                              className="p-2 hover:bg-secondary transition-smooth text-foreground"
-                            >
-                              <Plus className="w-4 h-4" />
-                            </button>
-                          </div>
-
-                          <Button
-                            onClick={() => handleAddToCart(product)}
-                            className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground shadow-soft transition-smooth"
-                          >
-                            <ShoppingCart className="mr-2 w-4 h-4" />
-                            Add
+                        {product.outOfOrder ? (
+                          <Button disabled className="w-full">
+                            Out of Order
                           </Button>
-                        </div>
+                        ) : (
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center border border-border rounded-lg overflow-hidden bg-background/80 backdrop-blur-sm">
+                              <button
+                                onClick={() => handleQuantityChange(product.id, -1)}
+                                className="p-2 hover:bg-secondary transition-smooth text-foreground"
+                              >
+                                <Minus className="w-4 h-4" />
+                              </button>
+                              <span className="w-8 text-center font-medium text-foreground">
+                                {quantities[product.id] || 1}
+                              </span>
+                              <button
+                                onClick={() => handleQuantityChange(product.id, 1)}
+                                className="p-2 hover:bg-secondary transition-smooth text-foreground"
+                              >
+                                <Plus className="w-4 h-4" />
+                              </button>
+                            </div>
+
+                            <Button
+                              onClick={() => handleAddToCart(product)}
+                              className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground shadow-soft transition-smooth"
+                            >
+                              <ShoppingCart className="mr-2 w-4 h-4" />
+                              Add
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>

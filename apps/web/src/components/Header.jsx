@@ -29,7 +29,7 @@ const Header = () => {
             {/* Logo */}
             <Link to="/" className="flex items-center group">
               <img 
-                src="https://horizons-cdn.hostinger.com/af6267a3-879e-4e3c-a1ed-86471b79742c/d5085528b6f818b588a7d9f9c0227726.png" 
+                src="/logo.png" 
                 alt="Kitchen Pastries Logo" 
                 className="w-[120px] sm:w-[140px] md:w-[160px] lg:w-[160px] h-auto object-contain transition-smooth hover:scale-105"
               />
