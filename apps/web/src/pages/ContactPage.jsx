@@ -24,13 +24,15 @@ const ContactPage = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  // There is no inbox behind this form, so hand the message over to WhatsApp.
   const handleSubmit = (e) => {
     e.preventDefault();
+    const text = `Hello! I'm ${formData.name} (${formData.email}).\n\n${formData.message}`;
+    window.open(`https://wa.me/2348069747505?text=${encodeURIComponent(text)}`, '_blank');
     toast({
-      title: "Message Sent!",
-      description: "Thank you for contacting us. We'll get back to you soon!",
+      title: "Opening WhatsApp",
+      description: "Press send in WhatsApp to deliver your message.",
     });
-    setFormData({ name: '', email: '', message: '' });
   };
 
   const handleWhatsAppContact = () => {
@@ -188,7 +190,7 @@ const ContactPage = () => {
                         type="submit"
                         className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-6 text-lg shadow-soft-lg hover:shadow-soft-xl transition-smooth hover:scale-105"
                       >
-                        Send Message
+                        Send via WhatsApp
                       </Button>
                     </form>
 
@@ -222,7 +224,7 @@ const ContactPage = () => {
                       style={{ border: 0, minHeight: '400px' }}
                       loading="lazy"
                       allowFullScreen=""
-                      src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3966.4523789234567!2d7.532209329452964!3d6.448703426190731!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x1044b8d0e0e0e0e1%3A0x1a1a1a1a1a1a1a1a!2s8%20Onitsha%20Crescent%2C%20Independence%20Layout%2C%20Enugu!5e0!3m2!1sen!2sng!4v1234567890"
+                      src="https://maps.google.com/maps?q=8+Onitsha+Crescent,+Independence+Layout,+Enugu,+Nigeria&t=&z=17&ie=UTF8&iwloc=&output=embed"
                     />
                   </CardContent>
                 </Card>

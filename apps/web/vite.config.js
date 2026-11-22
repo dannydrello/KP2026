@@ -244,7 +244,7 @@ export default defineConfig({
 		port: 3000,
 		cors: true,
 		headers: {
-			// Disabled COEP to allow Paydestal iframe to load
+			// Disabled COEP to allow Paystack iframe to load
 			// 'Cross-Origin-Embedder-Policy': 'credentialless',
 			'Cross-Origin-Resource-Policy': 'cross-origin',
 			'Access-Control-Allow-Origin': '*',
@@ -259,12 +259,24 @@ export default defineConfig({
 	},
 	build: {
 		rollupOptions: {
+			input: {
+				main: path.resolve(__dirname, 'index.html'),
+				'cafe-menu': path.resolve(__dirname, 'cafe-menu.html'),
+			},
 			external: [
 				'@babel/parser',
 				'@babel/traverse',
 				'@babel/generator',
 				'@babel/types'
-			]
+			],
+			output: {
+				entryFileNames: 'assets/[name]-[hash].js',
+				chunkFileNames: 'assets/[name]-[hash].js',
+				assetFileNames: (info) => {
+					if (info.names?.some(n => n.endsWith('.css'))) return 'assets/main-[hash].css';
+					return 'assets/[name]-[hash][extname]';
+				},
+			}
 		}
 	}
 });

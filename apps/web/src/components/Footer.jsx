@@ -5,7 +5,7 @@ const Footer = () => {
   const currentYear = new Date().getFullYear();
   return <footer className="bg-secondary border-t border-border">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
           {/* Branding */}
           <div className="space-y-4">
             <div className="flex items-center">
@@ -24,6 +24,24 @@ const Footer = () => {
                   <Link to={item === 'Home' ? '/' : `/${item.toLowerCase()}`} className="text-sm text-muted-foreground hover:text-primary transition-smooth">
                     {item}
                   </Link>
+                  {item === 'Contact' && (
+                    <>
+                      <Link
+                        to="/secret-menu"
+                        className="block text-xs text-muted-foreground/40 hover:text-primary mt-1 transition-smooth"
+                        title="Secret Menu"
+                      >
+                        ✦ Café Menu
+                      </Link>
+                      <Link
+                        to="/admin"
+                        className="block text-xs text-muted-foreground/40 hover:text-primary mt-1 transition-smooth"
+                        title="Admin"
+                      >
+                        ✦ Admin
+                      </Link>
+                    </>
+                  )}
                 </li>)}
             </ul>
           </div>
@@ -51,13 +69,35 @@ const Footer = () => {
           <div>
             <span className="text-lg font-semibold text-foreground mb-4 block">Follow Us</span>
             <div className="flex space-x-4">
-              <a href="https://wa.me/15551234567" target="_blank" rel="noopener noreferrer" className="p-3 bg-background rounded-lg hover:bg-primary hover:scale-110 transition-smooth shadow-soft" aria-label="WhatsApp">
+              <a href="https://wa.me/2348069747505" target="_blank" rel="noopener noreferrer" className="p-3 bg-background rounded-lg hover:bg-primary hover:scale-110 transition-smooth shadow-soft" aria-label="WhatsApp">
                 <MessageCircle className="w-5 h-5 text-foreground" />
               </a>
               <a href="https://instagram.com/kitchenpastries" target="_blank" rel="noopener noreferrer" className="p-3 bg-background rounded-lg hover:bg-primary hover:scale-110 transition-smooth shadow-soft" aria-label="Instagram">
                 <Instagram className="w-5 h-5 text-foreground" />
               </a>
             </div>
+          </div>
+
+          {/* Legal */}
+          <div>
+            <span className="text-lg font-semibold text-foreground mb-4 block">Legal</span>
+            <ul className="space-y-2">
+              <li>
+                <Link to="/terms" className="text-sm text-muted-foreground hover:text-primary transition-smooth">
+                  Terms & Conditions
+                </Link>
+              </li>
+              <li>
+                <Link to="/refund-policy" className="text-sm text-muted-foreground hover:text-primary transition-smooth">
+                  Refund Policy
+                </Link>
+              </li>
+              <li>
+                <Link to="/privacy-policy" className="text-sm text-muted-foreground hover:text-primary transition-smooth">
+                  Privacy Policy
+                </Link>
+              </li>
+            </ul>
           </div>
         </div>
 

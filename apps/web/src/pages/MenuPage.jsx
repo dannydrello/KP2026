@@ -11,6 +11,9 @@ import Footer from '@/components/Footer.jsx';
 import { useCart } from '@/components/CartContext.jsx';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'react-router-dom';
+import { supabase } from '@/lib/supabaseClient';
+
+const formatPrice = (price) => `₦${Number(price).toLocaleString('en-NG')}`;
 
 const MenuPage = () => {
   const location = useLocation();
@@ -20,120 +23,57 @@ const MenuPage = () => {
   const [selectedFlavors, setSelectedFlavors] = useState({});
   const [cakeComments, setCakeComments] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
+  const [menuSections, setMenuSections] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
   const { addToCart } = useCart();
   const { toast } = useToast();
 
-  // master menu organized into three primary sections
-  const menuSections = {
-    cafe: {
-      title: 'CAFE',
-      products: [
-        { id: 1, name: 'Cheesecake slice', category: 'cakes', price: '₦6000', description: 'Buttery, flaky layers of perfection baked fresh every morning', image: '/menu/CHEESECAKE_SLICE.png' },
-        { id: 2, name: 'iced cake slice', category: 'cakes', price: '₦3675', description: 'vanilla chocolate, red velvet, strawberry', image: '/menu/icecakeslice.jpg' },
-        { id: 3, name: 'Hotdog waffle', category: 'pastries', price: '₦1260', description: 'Soft, fluffy waffles with a savory twist', image: '/menu/HOTDOGWAFFLE.jpg' },
-        { id: 4, name: 'Childrens pastry party bag', category: 'pastries', price: '₦3900', description: '2 Ghana buns , 1 hotdog waffle and party Meatpie', image: '/menu/pastrybag.jpg' },
-        { id: 7, name: 'White Chocolate Oat Cookie', category: 'cookies', price: '₦4147.50', description: 'Dozen of chewy cookies loaded with premium chocolate chips', image: '/menu/WHITECHOCOLATEOATCOOKIE.jpg' },
-        { id: 8, name: 'Plain waffles', category: 'pastries', price: '₦2625', description: 'Soft, buttery waffles', image: '/menu/waffles.jpg' },
-        { id: 10, name: 'Yougurt', category: 'drinks', price: '₦2625', description: 'Greek yogurt parfait', image: '/menu/yogurt.jpg', flavors: ['Vanilla', 'Strawberry', 'Banana'] },
-        // additional cafe items previously listed further down
-        { id: 11, name: 'Sandwitch', category: 'pastries', price: '₦2625', description: 'Sandwitch', image: '/menu/CHICKENSANDWITCH.jpg' },
-        { id: 12, name: 'Milkshake', category: 'drinks', price: '₦4095', description: 'Chill sweet and healthy Milkshake', image: '/menu/MILKSHAKE.jpg' },
-        { id: 9, name: 'Zobo', category: 'drinks', price: '₦4095', description: 'Chill sweet and healthy Zobo', image: '/menu/zobo.jpeg' },       
-        { id: 16, name: 'chocolate waffles', category: 'pastries', price: '₦3360', description: 'Pack of soft, chocolate waffles', image: '/menu/waffles.jpg' },
-        { id: 17, name: 'Milky Bread', category: 'pastries', price: '₦2100', description: 'Soft milky bread', image: '/menu/milkbread.jpeg' },
-        { id: 18, name: 'Bread rolls', category: 'pastries', price: '₦1365', description: 'Sweet bread rolls', image: '/menu/breadrolls.jpeg' },
-        { id: 19, name: 'Potato chips', category: 'pastries', price: '₦4147.50', description: 'Crispy potato chips', image: '/menu/potatocrips.jpg' },
-        { id: 20, name: '3 Plantain Chips tub', category: 'pastries', price: '₦9450', description: 'Crispy plantain chips', image: '/menu/midiplantaincrips.jpg' },
-        { id: 21, name: 'Fruit cake slice', category: 'cakes', price: '₦5250', description: 'Delicious fruit cake slice', image: '/menu/fruitcakeslice.jpeg' },
-        { id: 72, name: 'Fruit cake midi', category: 'cakes', price: '₦7350', description: 'Delicious fruit cake', image: '/menu/fruitcake2.jpg' },
-        { id: 73, name: 'Fruit cake large', category: 'cakes', price: '₦23100', description: 'Delicious fruit cake', image: '/menu/fruitcakelarge.jpeg' },  
-        { id: 28, name: 'Gelato Big', category: 'drinks', price: '₦7350', description: 'Big Gelato', image: '/menu/gelato.jpg' },
-        { id: 29, name: '3 Midi cake in a cup', category: 'cakes', price: '₦4725', description: 'Delicious midi cake in a cup', image: '/menu/cakeinacup.jpeg' },
-        { id: 31, name: 'Chin Chin painter', category: 'pastries', price: '₦22050', description: 'Crispy fried snack, painter', image: '/menu/CHINCHIN_PAINTER.png' },
-        { id: 74, name: 'Chin Chin pack', category: 'pastries', price: '₦9345', description: 'Crispy fried snack, pack', image: '/menu/Large_Chinchin.png' },
-        { id: 32, name: 'Plain doughnut', category: 'pastries', price: '₦787.50', description: 'creamy puffs', image: '/menu/Milky_donut.png' },
-        { id: 33, name: 'Meatpie', category: 'pastries', price: '₦2572.50', description: 'mini sausage pot', image: '/menu/meatpie.jpg' },
-        { id: 34, name: 'Milky doughnut', category: 'pastries', price: '₦1890', description: 'Very nice fishroll', image: '/menu/Milky_donut.png' },
-        { id: 35, name: 'Nutella filled doughnut', category: 'pastries', price: '₦1050', description: 'Sweet sugar doughnut', image: '/menu/Nutella_filled_Donut.png' },       
-        { id: 37, name: 'Fresh cold pressed juice', category: 'drinks', price: '₦3885', description: 'Orange, pineapple , Bloody goodness, Signature Zobo', image: '/menu/freshjuice.jpg' },
-        { id: 38, name: 'Crispy chicken burger', category: 'pastries', price: '₦6615', description: 'Crispy chicken burger', image: '/menu/CRISPY_CHICKEN_BURGER.png' },
-        { id: 23, name: 'Cake loaf', category: 'cakes', price: '₦3570', description: 'Delicious cake loaf', image: '/menu/cakeloaf.jpeg', flavors: ['Chocolate', 'Vanilla', 'Red Velvet', 'Cookies N Creme', 'Strawberry', 'Malted Milk'] },
-       
-        { id: 40, name: 'Sugar coated Donny pots', category: 'pastries', price: '₦1000', description: 'Sugar coated Donny pots', image: '/menu/Sugar_coated_Donny_pots.png' },
-        { id: 41, name: 'Peppered chicken', category: 'pastries', price: '₦3937.50', description: 'Spicy peppered chicken', image: '/menu/PEPPEREDCHICKEN_MAXI.png' },
-        { id: 42, name: 'Sausage wraps', category: 'pastries', price: '₦1260', description: 'Sausage wraps', image: '/menu/sausagewraps.jpg' },
-        { id: 43, name: 'Croissant', category: 'pastries', price: '₦3675', description: 'Delicious croissant', image: '/menu/croissant.jpg' },
-        { id: 44, name: 'Scotch Egg', category: 'pastries', price: '₦2100', description: 'Melt-in-mouth scotch egg', image: '/menu/SCOTCHED_EGG.png' },
-        { id: 45, name: 'Milky popcorn', category: 'pastries', price: '₦1995', description: 'Sweetened/salted sweetened', image: '/menu/popcorn.jpg' },
-        { id: 47, name: 'Egg roll', category: 'pastries', price: '₦787.50', description: 'Delicious egg roll', image: '/menu/eggroll.jpg' },
-        { id: 48, name: 'Cookies', category: 'pastries', price: '₦4095', description: 'Fresh baked cookies', image: '/menu/cookies.jpeg', flavors: ['Classic', 'NY Style', 'Red Velvet'] },
-        { id: 15, name: 'Butter cookies (3)', category: 'pastries', price: '₦4675', description: 'cookies', image: '/menu/buttercookies.jpg' },
-        { id: 49, name: 'Cake in a cup (3)', category: 'cakes', price: '₦4900', description: 'Delicious cake in a cup', image: '/menu/cakeinacup.jpeg', flavors: ['Vanilla', 'Red Velvet', 'Chocolate', 'Malted Milk'] },
-        { id: 50, name: 'Ice 2 in 1 cupcake', category: 'cakes', price: '₦2362.50', description: 'delicious ice cupcake', image: '/menu/SINGLEICEDCUPCAKES.jpg' },      
-        { id: 52, name: 'Low sugar carrot Loaf', category: 'cakes', price: '₦5825.50', description: 'Low sugar carrot cake', image: '/menu/carrotcake.jpg' },
-        { id: 53, name: 'Granola', category: 'pastries', price: '₦7350', description: 'Crunchy and healthy granola', image: '/menu/granola.jpg' },    
-        { id: 55, name: 'Puff pot', category: 'pastries', price: '₦1785', description: 'Creamy puff pot', image: '/menu/puffpots.jpg' },
-        { id: 22, name: 'Ghana buns (3)', category: 'pastries', price: '₦1050', description: 'Delicious Ghana buns', image: '/menu/GHANA_BUNS.png' },
-        { id: 56, name: '6" Ready to go cake', category: 'cakes', price: '₦7245', description: 'Freshly made and Iced', image: '/menu/6cake.jpeg' },      
-        { id: 58, name: '8"  Ready to go cake', category: 'cakes', price: '₦24525', description: 'Freshly made and Iced', image: '/menu/8inchcake.jpg' },
-        { id: 59, name: 'Muffins', category: 'pastries', price: '₦3150', description: 'Fresh baked muffins', image: '/menu/muffins.jpeg', flavors: ['Chocolate', 'Oreos', 'Plain'] },
-        { id: 60, name: '10" Ready to go Cake', category: 'cakes', price: '₦29400', description: 'Freshly made and Iced', image: '/menu/10inchcake.jpg' },
-        { id: 61, name: 'Fishroll', category: 'pastries', price: '₦1260', description: 'Delicious fishroll', image: '/menu/FISHROLL.png' },
-        { id: 62, name: 'Brownies', category: 'pastries', price: '₦4179', description: 'Decadent brownies', image: '/menu/brownies.jpg' },
-        { id: 63, name: 'Bento cake', category: 'cakes', price: '₦6300', description: 'Bento cake', image: '/menu/bentocake.jpg' },
-        { id: 64, name: 'Jumbo cake', category: 'cakes', price: '₦1785', description: 'Large jumbo cake', image: '/menu/JUMBOCUPCAKE.jpg', flavors: ['Chocolate', 'Vanilla', 'Red Velvet', 'Cookies N Creme', 'Strawberry', 'Malted Milk'] },
-        { id: 65, name: '4 in 1 cupcake', category: 'cakes', price: '₦2625', description: 'Box of cupcake', image: '/menu/nakedcupcakes.jpg' },
-        { id: 66, name: 'Cake slice box', category: 'cakes', price: '₦3675', description: 'Box of cake slices', image: '/menu/cakesliceinabox.jpg' },
-        { id: 75, name: 'Plantain loaf', category: 'pastries', price: '₦5827.50', description: 'Moist and delicious plantain loaf', image: '/menu/plantaincake.jpg' },
-        
-        { id: 67, name: 'Chicken Salad', category: 'pastries', price: '₦5775', description: 'Fresh and healthy salad', image: '/menu/salad.jpeg' },
-       
-        { id: 69, name: 'Tripple delight cake', category: 'cakes', price: '₦2940', description: 'Decadent triple-layer cake', image: '/menu/tripledelight.jpg' },
-        { id: 77, name: 'Coconut Bread', category: 'pastries', price: '₦1543.50', description: 'Delicious coconut bread', image: '/menu/coconutbread.jpeg' },    
-        { id: 79, name: 'Chrispy chicken burger (small)', category: 'pastries', price: '₦3675', description: 'Delicious sardine bread', image: '/menu/CRISPY_CHICKEN_BURGER.png' },
-        { id: 80, name: 'Parfait small', category: 'pastries', price: '₦5145', description: 'Delicious sardine bread', image: '/menu/GREEK_YOGURT_PARFAIT.png' },
-        { id: 81, name: 'Parfait Medium', category: 'pastries', price: '₦6300', description: 'Delicious sardine bread', image: '/menu/GREEK_YOGURT_PARFAIT.png' },
-        { id: 82, name: 'Parfait Large', category: 'pastries', price: '₦8085', description: 'Delicious sardine bread', image: '/menu/GREEK_YOGURT_PARFAIT.png' },
-        { id: 83, name: 'Sardine Bread', category: 'pastries', price: '₦1543.50', description: 'Delicious sardine bread', image: '/menu/sardinebread.jpeg' },
-        { id: 84, name: 'Samosa (3)', category: 'pastries', price: '₦2467.50', description: 'Delicious samosa', image: '/menu/Pot of samosas.png' },
-        { id: 85, name: 'Spring rolls (3)', category: 'pastries', price: '₦1890', description: 'Delicious spring rolls', image: '/menu/BOX_OF_SPRINGROLLS.png' },
-        { id: 86, name: 'Pizza midi', category: 'pastries', price: '₦12,495', description: 'Delicious pizza', image: '/menu/pizza.jpeg' },
-        { id: 87, name: 'Pizza large', category: 'pastries', price: '₦17,640', description: 'Delicious pizza', image: '/menu/pizza.jpeg' },
-        { id: 88, name: 'Scones', category: 'pastries', price: '₦945', description: 'Delicious scones', image: '/menu/scones.jpg' },
-        { id: 89, name: 'Wheat Bread', category: 'pastries', price: '₦3885', description: 'Delicious wheat bread', image: '/menu/wheatbread.jpg' },
-      ]
-    },
-    gourmetCakes: {
-      title: 'GOURMET CAKES',
-      products: [
-        { id: 5, name: 'Cake mail; MR TEMPTATION', category: 'cakes', price: '₦9850', description: 'Handcrafted gourmet cake', image: '/menu/CAKEMAILMRTEMPTATION.jpg', flavors: ['Carrot', 'Marble', 'Plantain'] },
-        { id: 6, name: 'Cake mail; MR ORIGINAL', category: 'cakes', price: '₦9850', description: 'Signature gourmet cake', image: '/menu/CAKEMAILMRORIGINAL.jpg', flavors: ['Vanilla', 'Red Velvet', 'Chocolate'] },
-      ]
-    },
-    specials: {
-      title: 'MOTHERS DAY SPECIALS',
-      products: [
-        { id: 90, name: 'Fluffy cake tray', category: 'specials', price: '₦32,900', description: 'Fluffy cake tray for mothers day', image: '/menu/mothers.jpg' },
-        { id: 91, name: 'Executive Salad Tray', category: 'specials', price: '₦20,000', description: '', image: '/menu/execsaladtray.PNG' },
-        { id: 92, name: 'Treatbox', category: 'specials', price: '₦150,000', description: 'Mothers day treat box', image: '/menu/treatbox.PNG' },
-       // { id: 93, name: 'Diamond Premium Breakfast tray', category: 'specials', price: '₦150000', description: 'Sandwitch, drinks, waffles, puffs, eggs etc', image: '/menu/DIAMONDPREMIUMBREAKFASTTRAY.jpg' },
-       // { id: 94, name: 'Silver Premium Breakfst tray', category: 'specials', price: '₦60000', description: 'Sandwitch, drinks, waffles etc', image: '/menu/DIAMONDPREMIUMBREAKFASTTRAY.jpg' },
-       // { id: 95, name: 'Full bird chops box', category: 'specials', price: '₦50000', description: 'Full bird chops box', image: '/menu/birdbox.PNG' },
-        { id: 96, name: 'Half bird chops box', category: 'specials', price: '₦30000', description: 'Half bird chops box', image: '/menu/birdbox.PNG' },
-      //  { id: 97, name: 'Christmas Day pastry box', category: 'specials', price: '₦48950', description: 'spingrolls, meatpies etc', image: '/menu/CHRISTMASDAYPASTRYBOX.jpg' },
-       // { id: 98, name: 'Christmas day salad tray', category: 'specials', price: '₦19900', description: 'Flaky pastry with seasoned beef filling', image: '/menu/CHRISTMASDAYSALADTRAY.jpg' },
-       // { id: 99, name: 'Individual Premium breakfast box', category: 'specials', price: '₦22500', description: 'Glorious breakfast with cake, apple etc', image: '/menu/INDIVIDUAL_PREMIUM_BREAKFAST.png' },
-       //  { id: 100, name: 'Extra healty premium breakfast tray', category: 'specials', price: '₦82000', description: 'Extra healty premium breakfast tray', image: '/menu/EXTRA_HEALTHY_BREAKFAST_TRAY.png' },
-      ]
-    }
-  };
+  // Menu is the live product catalog from Supabase, editable from the admin portal.
+  useEffect(() => {
+    const loadProducts = async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('display_order');
+
+      if (error) {
+        console.error('Failed to load menu', error.message);
+        setIsLoading(false);
+        return;
+      }
+
+      const sections = {};
+      (data || []).forEach((product) => {
+        if (!sections[product.section]) {
+          sections[product.section] = { title: product.section_title, products: [] };
+        }
+        sections[product.section].products.push({
+          id: product.id,
+          name: product.name,
+          category: product.category,
+          // Keep price numeric - it flows into the cart, order payload, and receipt/email
+          // math downstream. Formatting happens only at render time, below.
+          price: Number(product.price),
+          description: product.description,
+          image: product.image,
+          flavors: product.flavors || undefined,
+          outOfOrder: !product.active,
+        });
+      });
+
+      setMenuSections(sections);
+      setIsLoading(false);
+    };
+
+    loadProducts();
+  }, []);
 
   useEffect(() => {
     const sectionFromState = location.state?.section;
     if (sectionFromState && menuSections[sectionFromState]) {
       setActiveSection(sectionFromState);
     }
-  }, [location.state]);
+  }, [location.state, menuSections]);
 
   // when section changes, reset category filter
   useEffect(() => {
@@ -141,13 +81,25 @@ const MenuPage = () => {
   }, [activeSection]);
 
   const currentSection = menuSections[activeSection];
-  
+
+  if (isLoading || !currentSection) {
+    return (
+      <div className="min-h-screen">
+        <Header />
+        <div className="py-32 text-center text-muted-foreground">
+          {isLoading ? 'Loading menu...' : 'Menu is unavailable right now, please check back soon.'}
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
   // For cafe section, only show: cakes, drinks, pastries
   const allowedCafeCategories = ['cakes', 'drinks', 'pastries'];
-  const cafeProducts = activeSection === 'cafe' 
+  const cafeProducts = activeSection === 'cafe'
     ? currentSection.products.filter(p => allowedCafeCategories.includes(p.category))
     : currentSection.products;
-  
+
   const categories = ['all', ...new Set(cafeProducts.map(p => p.category))];
 
   let filteredProducts = selectedCategory === 'all'
@@ -185,6 +137,7 @@ const MenuPage = () => {
   };
 
   const handleAddToCart = (product) => {
+    if (product.outOfOrder) return;
     const qty = quantities[product.id] || 1;
     const selectedFlavor = selectedFlavors[product.id] || (product.flavors ? product.flavors[0] : null);
     const cakeComment = cakeComments[product.id] || '';
@@ -202,6 +155,8 @@ const MenuPage = () => {
       description: `Added ${qty} ${product.name}${selectedFlavor ? ` (${selectedFlavor})` : ''} to your cart.`,
     });
     setQuantities(prev => ({ ...prev, [product.id]: 1 }));
+    // Otherwise the next cake silently inherits this one's message
+    setCakeComments(prev => ({ ...prev, [product.id]: '' }));
   };
 
   return (
@@ -233,17 +188,6 @@ const MenuPage = () => {
         {/* Menu Section */}
         <section className="py-16 bg-background">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            {/* Debug: Current Section Indicator */}
-            <div className="mb-4 p-4 bg-yellow-100 border border-yellow-300 rounded-lg">
-              <p className="text-sm text-yellow-800">
-                <strong>Current Section:</strong> {currentSection.title} | <strong>Active Section State:</strong> {activeSection} | <strong>Selected Category:</strong> {selectedCategory}
-              </p>
-              <p className="text-sm text-yellow-800 mt-1">
-                <strong>Available Categories:</strong> {categories.join(', ')} | <strong>Filtered Products:</strong> {filteredProducts.length} items
-                {searchQuery && ` | Search: "${searchQuery}"`}
-              </p>
-            </div>
-
             {/* Section tabs */}
             <div className="mb-8 overflow-x-auto pb-4">
               <div className="flex flex-wrap gap-2 bg-secondary p-2 rounded-xl justify-center">
@@ -315,22 +259,29 @@ const MenuPage = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: (index % 10) * 0.05 }}
                 >
-                  <Card className="overflow-hidden rounded-xl shadow-soft-lg hover:shadow-soft-xl transition-all duration-300 ease-in-out hover:scale-[1.03] hover:bg-[#FFC600] border-border h-full flex flex-col group">
+                  <Card className={`overflow-hidden rounded-xl shadow-soft-lg border-border h-full flex flex-col group ${product.outOfOrder ? 'opacity-70' : 'hover:shadow-soft-xl transition-all duration-300 ease-in-out hover:scale-[1.03] hover:bg-[#FFC600]'}`}>
                     <div className="relative h-64 overflow-hidden">
                       <img
                         src={product.image}
                         alt={product.name}
-                        className="w-full h-full object-cover transition-smooth group-hover:scale-110"
+                        className={`w-full h-full object-cover transition-smooth ${product.outOfOrder ? 'grayscale' : 'group-hover:scale-110'}`}
                       />
                       <div className="absolute top-4 right-4 bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-semibold shadow-soft">
                         {product.category}
                       </div>
+                      {product.outOfOrder && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                          <span className="bg-destructive text-destructive-foreground px-4 py-1.5 rounded-full text-sm font-bold uppercase tracking-wide shadow-soft">
+                            Out of Order
+                          </span>
+                        </div>
+                      )}
                     </div>
                     <CardContent className="p-6 flex-1 flex flex-col">
                       <h3 className="text-xl font-bold text-foreground group-hover:text-gray-900 mb-2 transition-colors">{product.name}</h3>
                       <p className="text-sm text-muted-foreground group-hover:text-gray-800 mb-4 flex-1 transition-colors">{product.description}</p>
-                      
-                      {product.flavors && (
+
+                      {!product.outOfOrder && product.flavors && (
                         <div className="mb-4">
                           <Select
                             value={selectedFlavors[product.id] || product.flavors[0]}
@@ -350,7 +301,7 @@ const MenuPage = () => {
                         </div>
                       )}
                       
-                      {product.name.toLowerCase().includes('ready to go cake') && (
+                      {!product.outOfOrder && product.name.toLowerCase().includes('ready to go cake') && (
                         <div className="mb-4">
                           <label className="block text-sm font-medium text-foreground mb-2">
                             Cake Message (Optional)
@@ -370,35 +321,41 @@ const MenuPage = () => {
                       )}
                       
                       <div className="flex flex-col gap-4 mt-auto">
-                        <span className="text-2xl font-bold text-primary group-hover:text-gray-900 transition-colors">{product.price}</span>
+                        <span className="text-2xl font-bold text-primary group-hover:text-gray-900 transition-colors">{formatPrice(product.price)}</span>
                         
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center border border-border rounded-lg overflow-hidden bg-background/80 backdrop-blur-sm">
-                            <button
-                              onClick={() => handleQuantityChange(product.id, -1)}
-                              className="p-2 hover:bg-secondary transition-smooth text-foreground"
-                            >
-                              <Minus className="w-4 h-4" />
-                            </button>
-                            <span className="w-8 text-center font-medium text-foreground">
-                              {quantities[product.id] || 1}
-                            </span>
-                            <button
-                              onClick={() => handleQuantityChange(product.id, 1)}
-                              className="p-2 hover:bg-secondary transition-smooth text-foreground"
-                            >
-                              <Plus className="w-4 h-4" />
-                            </button>
-                          </div>
-                          
-                          <Button 
-                            onClick={() => handleAddToCart(product)}
-                            className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground shadow-soft transition-smooth"
-                          >
-                            <ShoppingCart className="mr-2 w-4 h-4" />
-                            Add
+                        {product.outOfOrder ? (
+                          <Button disabled className="w-full">
+                            Out of Order
                           </Button>
-                        </div>
+                        ) : (
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center border border-border rounded-lg overflow-hidden bg-background/80 backdrop-blur-sm">
+                              <button
+                                onClick={() => handleQuantityChange(product.id, -1)}
+                                className="p-2 hover:bg-secondary transition-smooth text-foreground"
+                              >
+                                <Minus className="w-4 h-4" />
+                              </button>
+                              <span className="w-8 text-center font-medium text-foreground">
+                                {quantities[product.id] || 1}
+                              </span>
+                              <button
+                                onClick={() => handleQuantityChange(product.id, 1)}
+                                className="p-2 hover:bg-secondary transition-smooth text-foreground"
+                              >
+                                <Plus className="w-4 h-4" />
+                              </button>
+                            </div>
+
+                            <Button
+                              onClick={() => handleAddToCart(product)}
+                              className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground shadow-soft transition-smooth"
+                            >
+                              <ShoppingCart className="mr-2 w-4 h-4" />
+                              Add
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>

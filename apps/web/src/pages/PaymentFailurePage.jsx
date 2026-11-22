@@ -34,7 +34,7 @@ const PaymentFailurePage = () => {
                 
                 <div className="bg-secondary rounded-lg p-4 text-sm text-muted-foreground">
                   <p className="font-medium text-foreground mb-1">Reason for failure:</p>
-                  <p>{decodeURIComponent(reason)}</p>
+                  <p>{reason}</p>
                 </div>
 
                 <p className="text-muted-foreground">

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import Header from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
-import { useCart } from '@/components/CartContext.jsx';
+import { useCart, getItemKey } from '@/components/CartContext.jsx';
 
 const CartPage = () => {
   const { cartItems, subtotal, tax, shipping, total, updateQuantity, removeFromCart } = useCart();
@@ -50,7 +50,7 @@ const CartPage = () => {
                   <AnimatePresence>
                     {cartItems.map((item) => (
                       <motion.div
-                        key={item.id}
+                        key={getItemKey(item)}
                         layout
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -69,19 +69,22 @@ const CartPage = () => {
                               {item.selectedFlavor && (
                                 <p className="text-sm text-muted-foreground mt-1">Flavor: {item.selectedFlavor}</p>
                               )}
+                              {item.cakeComment && (
+                                <p className="text-sm text-muted-foreground italic mt-1">Cake message: "{item.cakeComment}"</p>
+                              )}
                               <p className="text-primary font-semibold mt-1 group-hover:text-gray-900 transition-colors">{formatCurrency(item.price)}</p>
                             </div>
                             <div className="flex items-center gap-4">
                               <div className="flex items-center border border-border rounded-lg overflow-hidden bg-background/80 backdrop-blur-sm">
                                 <button
-                                  onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
+                                  onClick={() => updateQuantity(item, Math.max(1, item.quantity - 1))}
                                   className="p-2 hover:bg-secondary transition-smooth text-foreground"
                                 >
                                   <Minus className="w-4 h-4" />
                                 </button>
                                 <span className="w-10 text-center font-medium text-foreground">{item.quantity}</span>
                                 <button
-                                  onClick={() => updateQuantity(item.id, Math.min(99, item.quantity + 1))}
+                                  onClick={() => updateQuantity(item, Math.min(99, item.quantity + 1))}
                                   className="p-2 hover:bg-secondary transition-smooth text-foreground"
                                 >
                                   <Plus className="w-4 h-4" />
@@ -90,7 +93,7 @@ const CartPage = () => {
                               <button
                                 onClick={() => {
                                   if (window.confirm('Remove this item from cart?')) {
-                                    removeFromCart(item.id);
+                                    removeFromCart(item);
                                   }
                                 }}
                                 className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-smooth bg-background/50"

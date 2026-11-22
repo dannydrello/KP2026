@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Header from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
-import { useCart } from '@/components/CartContext.jsx';
+import { useCart, getItemKey } from '@/components/CartContext.jsx';
 import CheckoutForm from '@/components/CheckoutForm.jsx';
 
 const OrderPage = () => {
@@ -93,7 +93,7 @@ const OrderPage = () => {
                       {/* Items List */}
                       <div className="p-6 space-y-4 max-h-80 overflow-y-auto custom-scrollbar">
                         {cartItems.map((item) => (
-                          <div key={item.id} className="flex justify-between text-sm items-start border-b border-border/50 pb-3 last:border-0 last:pb-0">
+                          <div key={getItemKey(item)} className="flex justify-between text-sm items-start border-b border-border/50 pb-3 last:border-0 last:pb-0">
                             <div className="flex items-start gap-3">
                               <span className="font-semibold text-foreground bg-secondary px-2 py-1 rounded-md text-xs mt-0.5">
                                 {item.quantity}x

@@ -13,11 +13,11 @@ import { apiServerClient } from '@/lib/apiServerClient';
 
 const PaymentSuccessPage = () => {
   const [searchParams] = useSearchParams();
-  const paymentId = searchParams.get('paymentId') || searchParams.get('reference');
+  const paymentId = searchParams.get('orderId') || searchParams.get('paymentId') || searchParams.get('reference');
   const { verifyPayment } = usePayment();
   const { clearCart } = useCart();
   
-  const [status, setStatus] = useState('verifying'); // verifying, completed, failed, pending
+  const [status, setStatus] = useState('verifying'); // verifying, completed, review, failed, pending
   const [paymentDetails, setPaymentDetails] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -31,7 +31,7 @@ const PaymentSuccessPage = () => {
       
       for (const order of unsyncedOrders) {
         try {
-          const response = await apiServerClient.fetch('/payment/initiate', {
+          const response = await apiServerClient.fetch('/api/payment/initiate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(order)
@@ -50,7 +50,7 @@ const PaymentSuccessPage = () => {
     }
   };
 
-  const checkStatus = async () => {
+  const checkStatus = async (signal) => {
     if (!paymentId) {
       setStatus('failed');
       setErrorMsg('No payment reference found.');
@@ -59,12 +59,12 @@ const PaymentSuccessPage = () => {
 
     try {
       setStatus('verifying');
-      
+
       // First sync any pending orders
       await syncPendingOrders();
-      
-      const data = await verifyPayment(paymentId);
-      
+
+      const data = await verifyPayment(paymentId, signal);
+
       if (data.status === 'completed') {
         setStatus('completed');
         setPaymentDetails(data);
@@ -74,6 +74,9 @@ const PaymentSuccessPage = () => {
         const pendingOrders = JSON.parse(localStorage.getItem('pendingOrders') || '[]');
         const updated = pendingOrders.filter(o => o.orderId !== paymentId);
         localStorage.setItem('pendingOrders', JSON.stringify(updated));
+      } else if (data.status === 'review') {
+        setStatus('review');
+        clearCart();
       } else if (data.status === 'failed') {
         setStatus('failed');
         setErrorMsg('Payment was marked as failed by the gateway.');
@@ -82,13 +85,17 @@ const PaymentSuccessPage = () => {
         setStatus('pending');
       }
     } catch (err) {
-      setStatus('failed');
-      setErrorMsg(err.message || 'Failed to verify payment status.');
+      if (signal?.aborted) return;
+      // Not knowing is not the same as failing: "failed" sends people back to pay a second time.
+      console.error('Verification error', err);
+      setStatus('pending');
     }
   };
 
   useEffect(() => {
-    checkStatus();
+    const ac = new AbortController();
+    checkStatus(ac.signal);
+    return () => ac.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paymentId]);
 
@@ -121,11 +128,21 @@ const PaymentSuccessPage = () => {
                     <RefreshCw className="w-20 h-20 mx-auto text-yellow-500 animate-spin-slow" />
                     <h1 className="text-3xl font-bold text-foreground">Payment Pending</h1>
                     <p className="text-muted-foreground text-lg">
-                      Your payment is still processing. If you completed the payment in the new tab, please click the button below to check again.
+                      Your payment is still processing. Please don't pay again. Check again below, or contact us with your order number: {paymentId}
                     </p>
-                    <Button onClick={checkStatus} size="lg" className="mt-4">
+                    <Button onClick={() => checkStatus()} size="lg" className="mt-4">
                       Check Status Again
                     </Button>
+                  </div>
+                )}
+
+                {status === 'review' && (
+                  <div className="space-y-6 py-8">
+                    <Package className="w-20 h-20 mx-auto text-primary" />
+                    <h1 className="text-3xl font-bold text-foreground">Payment Received</h1>
+                    <p className="text-muted-foreground text-lg break-words">
+                      We need to check your order before preparing it. Please don't pay again. Contact us on +234 806 974 7505 with order number {paymentId}.
+                    </p>
                   </div>
                 )}
 
@@ -138,14 +155,14 @@ const PaymentSuccessPage = () => {
                     <p className="text-muted-foreground text-lg">
                       Thank you for your purchase. Your delicious pastries are being prepared!
                     </p>
-                    
+
                     <div className="bg-secondary rounded-xl p-6 mt-8 text-left space-y-4">
                       <h3 className="font-semibold text-foreground flex items-center gap-2 border-b border-border pb-2">
                         <Package className="w-5 h-5" /> Order Details
                       </h3>
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                          <span className="text-muted-foreground block">Payment ID</span>
+                          <span className="text-muted-foreground block">Order Number</span>
                           <span className="font-medium text-foreground">{paymentId}</span>
                         </div>
                         <div>
@@ -154,14 +171,52 @@ const PaymentSuccessPage = () => {
                         </div>
                         <div>
                           <span className="text-muted-foreground block">Amount Paid</span>
-                          <span className="font-medium text-foreground">${paymentDetails?.amount?.toFixed(2) || '0.00'}</span>
+                          <span className="font-medium text-foreground">
+                            {`₦${Number(paymentDetails?.amount || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                          </span>
                         </div>
                         <div>
                           <span className="text-muted-foreground block">Estimated Delivery</span>
                           <span className="font-medium text-foreground">45 - 60 Minutes</span>
                         </div>
                       </div>
+
+                      {paymentDetails?.items?.length > 0 && (
+                        <div className="pt-2">
+                          <span className="text-muted-foreground block text-sm mb-2">Items</span>
+                          <ul className="space-y-2">
+                            {paymentDetails.items.map((item, idx) => (
+                              <li key={idx} className="flex justify-between items-start text-sm bg-background/60 rounded-lg px-3 py-2">
+                                <div>
+                                  <span className="font-medium text-foreground">
+                                    {item.name}{item.selectedFlavor ? ` (${item.selectedFlavor})` : ''} &times; {item.quantity}
+                                  </span>
+                                  {item.cakeComment && (
+                                    <div className="text-xs text-muted-foreground italic mt-0.5">"{item.cakeComment}"</div>
+                                  )}
+                                </div>
+                                <span className="text-foreground font-medium whitespace-nowrap ml-4">
+                                  {`₦${Number((item.price || 0) * (item.quantity || 1)).toLocaleString('en-NG')}`}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {(paymentDetails?.street || paymentDetails?.city) && (
+                        <div className="pt-2">
+                          <span className="text-muted-foreground block text-sm">Delivery Address</span>
+                          <span className="font-medium text-foreground text-sm">
+                            {[paymentDetails?.customerName, paymentDetails?.street, paymentDetails?.city].filter(Boolean).join(', ')}
+                          </span>
+                        </div>
+                      )}
                     </div>
+
+                    <p className="text-sm text-muted-foreground pt-2">
+                      A receipt has been sent to your email{paymentDetails?.customerEmail ? ` (${paymentDetails.customerEmail})` : ''}.
+                    </p>
 
                     <div className="pt-8">
                       <Link to="/">
@@ -183,7 +238,7 @@ const PaymentSuccessPage = () => {
                       {errorMsg}
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
-                      <Button onClick={checkStatus} variant="outline" size="lg">
+                      <Button onClick={() => checkStatus()} variant="outline" size="lg">
                         Try Verifying Again
                       </Button>
                       <Link to="/order">

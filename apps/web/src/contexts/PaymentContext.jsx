@@ -26,7 +26,7 @@ export const PaymentProvider = ({ children }) => {
         throw new Error('Missing required payment fields: amount, customerEmail, customerName, or orderItems');
       }
 
-      const response = await apiServerClient.fetch('/payment/initiate', {
+      const response = await apiServerClient.fetch('/api/payment/initiate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -47,7 +47,7 @@ export const PaymentProvider = ({ children }) => {
     }
   };
 
-  const verifyPayment = async (paymentId) => {
+  const verifyPayment = async (paymentId, signal) => {
     setIsProcessing(true);
     setError(null);
     try {
@@ -58,21 +58,25 @@ export const PaymentProvider = ({ children }) => {
       // Retry verification up to 5 times with delay (webhook may be processing)
       let lastError;
       for (let attempt = 0; attempt < 5; attempt++) {
+        if (signal?.aborted) throw new Error('Verification cancelled');
         try {
-          const response = await apiServerClient.fetch(`/payment/verify/${paymentId}`);
-          
+          const response = await apiServerClient.fetch(`/api/payment/verify/${paymentId}`, { signal });
+
           if (!response.ok) {
             const errorData = await response.json();
             throw new Error(errorData.error || 'Payment verification failed');
           }
-          
+
           const data = await response.json();
           return data;
         } catch (err) {
+          if (err.name === 'AbortError' || signal?.aborted) throw new Error('Verification cancelled');
           lastError = err;
           if (attempt < 4) {
-            // Wait before retrying (exponential backoff: 1s, 2s, 4s, 8s)
-            await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+            await new Promise((resolve, reject) => {
+              const t = setTimeout(resolve, Math.pow(2, attempt) * 1000);
+              signal?.addEventListener('abort', () => { clearTimeout(t); reject(new Error('Verification cancelled')); });
+            });
           }
         }
       }

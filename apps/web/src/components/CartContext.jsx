@@ -3,6 +3,18 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const CartContext = createContext();
 
+// A cart line is product + flavor + cake message: two cakes with different messages are two lines.
+export const getItemKey = (item) => JSON.stringify([item.id, item.selectedFlavor || '', item.cakeComment || '']);
+
+const loadCart = () => {
+  try {
+    const saved = JSON.parse(localStorage.getItem('kitchenPastriesCart'));
+    return Array.isArray(saved) ? saved.filter((item) => item && item.price != null && item.quantity > 0) : [];
+  } catch {
+    return [];
+  }
+};
+
 export const useCart = () => {
   const context = useContext(CartContext);
   if (!context) {
@@ -12,10 +24,7 @@ export const useCart = () => {
 };
 
 export const CartProvider = ({ children }) => {
-  const [cartItems, setCartItems] = useState(() => {
-    const savedCart = localStorage.getItem('kitchenPastriesCart');
-    return savedCart ? JSON.parse(savedCart) : [];
-  });
+  const [cartItems, setCartItems] = useState(loadCart);
 
   const [totals, setTotals] = useState({ subtotal: 0, tax: 0, shipping: 0, total: 0 });
 
@@ -48,57 +57,33 @@ export const CartProvider = ({ children }) => {
     if (quantity <= 0) return;
 
     setCartItems(prevItems => {
-      // Create a unique key that includes flavor for items with flavors
-      const itemKey = product.selectedFlavor 
-        ? `${product.id}-${product.selectedFlavor}` 
-        : product.id;
-      
-      const existingItem = prevItems.find(item => {
-        const existingKey = item.selectedFlavor 
-          ? `${item.id}-${item.selectedFlavor}` 
-          : item.id;
-        return existingKey === itemKey;
-      });
-      
+      const itemKey = getItemKey(product);
+      const existingItem = prevItems.find(item => getItemKey(item) === itemKey);
+
       if (existingItem) {
-        return prevItems.map(item => {
-          const existingKey = item.selectedFlavor 
-            ? `${item.id}-${item.selectedFlavor}` 
-            : item.id;
-          return existingKey === itemKey
-            ? { ...item, quantity: item.quantity + quantity }
-            : item;
-        });
+        return prevItems.map(item => getItemKey(item) === itemKey
+          ? { ...item, quantity: item.quantity + quantity }
+          : item);
       }
       return [...prevItems, { ...product, quantity }];
     });
   };
 
-  const removeFromCart = (productId) => {
-    setCartItems(prevItems => prevItems.filter(item => {
-      const itemKey = item.selectedFlavor 
-        ? `${item.id}-${item.selectedFlavor}` 
-        : item.id;
-      const targetKey = item.selectedFlavor 
-        ? `${productId}-${item.selectedFlavor}` 
-        : productId;
-      return itemKey !== targetKey;
-    }));
+  const removeFromCart = (target) => {
+    const targetKey = getItemKey(target);
+    setCartItems(prevItems => prevItems.filter(item => getItemKey(item) !== targetKey));
   };
 
-  const updateQuantity = (productId, quantity) => {
+  const updateQuantity = (target, quantity) => {
     if (quantity <= 0) return;
-    setCartItems(prevItems =>
-      prevItems.map(item => {
-        const itemKey = item.selectedFlavor 
-          ? `${item.id}-${item.selectedFlavor}` 
-          : item.id;
-        const targetKey = item.selectedFlavor 
-          ? `${productId}-${item.selectedFlavor}` 
-          : productId;
-        return itemKey === targetKey ? { ...item, quantity } : item;
-      })
-    );
+    const targetKey = getItemKey(target);
+    setCartItems(prevItems => prevItems.map(item => (getItemKey(item) === targetKey ? { ...item, quantity } : item)));
+  };
+
+  // Carts live in localStorage, so their prices can be older than the menu's.
+  const updatePrices = (pricedItems) => {
+    const prices = new Map(pricedItems.map(item => [item.id, item.price]));
+    setCartItems(prevItems => prevItems.map(item => (prices.has(item.id) ? { ...item, price: prices.get(item.id) } : item)));
   };
 
   const clearCart = () => {
@@ -115,6 +100,7 @@ export const CartProvider = ({ children }) => {
       addToCart,
       removeFromCart,
       updateQuantity,
+      updatePrices,
       clearCart
     }}>
       {children}

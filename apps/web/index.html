@@ -2,15 +2,27 @@
 <html lang="en">
 	<head>
 		<meta charset="UTF-8" />
-		<link rel="icon" type="image/svg+xml" href="/vite.svg" />
+		<link rel="icon" type="image/png" href="/logo.png" />
 		<meta name="generator" content="Hostinger Horizons" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<!-- Disable COEP to allow Paydestal payment iframe -->
+		<!-- Disable COEP to allow Flutterwave payment iframe -->
 		<meta http-equiv="Cross-Origin-Embedder-Policy" content="unsafe-none">
-		<title>Hostinger Horizons</title>
+		<title>Kitchen Pastries</title>
 	</head>
 	<body>
-		<div id="root"></div>
+		<div id="root">
+			<div id="js-fallback" style="display:none;font-family:sans-serif;text-align:center;padding:60px 20px;color:#555">
+				<p style="font-size:18px;margin-bottom:8px">Kitchen Pastries</p>
+				<p style="font-size:14px">Having trouble loading? Try a hard refresh: <strong>Ctrl + Shift + R</strong></p>
+			</div>
+		</div>
+		<script>
+			// Show fallback if JS bundle fails to load within 8 seconds
+			var _fbTimer = setTimeout(function() {
+				var fb = document.getElementById('js-fallback');
+				if (fb && !document.getElementById('root').dataset.mounted) fb.style.display = 'block';
+			}, 8000);
+		</script>
 		<script type="module" src="/src/main.jsx"></script>
 	</body>
 </html>

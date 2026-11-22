@@ -1,6 +1,15 @@
 <IfModule mod_rewrite.c>
 	RewriteEngine On
 	RewriteBase /
+
+	# /menu and /gallery are also real asset folders (product/gallery images), so the
+	# generic directory check below would treat a direct request for the SPA route as a
+	# request for the folder and 403. Route these two exact paths to the app first -
+	# requests for files inside the folders (e.g. /menu/CAKE.png) don't match and fall
+	# through to the normal static-file handling untouched.
+	RewriteRule ^menu/?$ index.html [L]
+	RewriteRule ^gallery/?$ index.html [L]
+
 	RewriteCond %{REQUEST_FILENAME} !-f
 	RewriteCond %{REQUEST_FILENAME} !-d
 	RewriteRule ^ index.html [L]
@@ -9,11 +18,13 @@
 <IfModule mod_headers.c>
 	Header set X-Powered-By "Hostinger Horizons"
 
-	# Cache everything on CDN by default
-	Header set Cache-Control "public, s-maxage=604800, max-age=0"
+	# Never cache HTML/entry files on the CDN or in the browser - they reference the current
+	# hashed asset filenames, so a stale cached copy points at assets that no longer exist.
+	Header set Cache-Control "public, s-maxage=0, max-age=0, must-revalidate"
 
-	# Cache in browser all assets
+	# Hashed asset filenames change whenever their content changes, so these are safe to
+	# cache long-term on both the CDN and in the browser.
 	<If "%{REQUEST_URI} =~ m#^/assets/.*$#">
-		Header set Cache-Control "public, max-age=604800"
+		Header set Cache-Control "public, max-age=604800, immutable"
 	</If>
 </IfModule>

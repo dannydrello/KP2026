@@ -10,45 +10,53 @@ import { useToast } from '@/hooks/use-toast';
 import { useCart } from '@/components/CartContext.jsx';
 import { apiServerClient } from '@/lib/apiServerClient';
 
+// Paystack's dashboard only displays metadata listed in custom_fields, so the order is spelled out there.
+const describeItems = (items) => items
+  .map((item) => [
+    `${item.quantity} x ${item.name}`,
+    item.selectedFlavor && `(${item.selectedFlavor})`,
+    item.cakeComment && `[message: ${item.cakeComment}]`,
+  ].filter(Boolean).join(' '))
+  .join('; ');
+
 const CheckoutForm = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { cartItems, subtotal, tax, shipping, total, cartCount, clearCart } = useCart();
-  const [paydestalReady, setPaydestalReady] = useState(false);
-  const [paydestalConfig, setPaydestalConfig] = useState(null);
+  const { cartItems, subtotal, tax, shipping, total, cartCount, updatePrices } = useCart();
+  const [paystackReady, setPaystackReady] = useState(false);
+  const [paystackConfig, setPaystackConfig] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Load Paydestal script and fetch config on mount
+  // Load Paystack inline script and fetch config on mount
   useEffect(() => {
-    // Fetch Paydestal config from API
     const loadConfig = async () => {
       try {
-        const response = await apiServerClient.fetch('/payment/config');
+        const response = await apiServerClient.fetch('/api/payment/config');
         if (response.ok) {
           const config = await response.json();
-          setPaydestalConfig(config);
+          setPaystackConfig(config);
         }
       } catch (err) {
-        console.error('Failed to load Paydestal config:', err);
+        console.error('Failed to load Paystack config:', err);
       }
     };
     loadConfig();
 
-    // Load Paydestal script
-    if (!window.PaydestalInit) {
+    if (!window.PaystackPop) {
       const script = document.createElement('script');
-      script.src = 'https://checkout.paydestal.com/lib/init.js';
+      script.src = 'https://js.paystack.co/v1/inline.js';
       script.async = true;
-      script.onload = () => setPaydestalReady(true);
+      script.onload = () => setPaystackReady(true);
       script.onerror = () => {
         toast({
-          title: "Error",
-          description: "Failed to load payment gateway. Please refresh.",
-          variant: "destructive"
+          title: 'Error',
+          description: 'Failed to load payment gateway. Please refresh.',
+          variant: 'destructive'
         });
       };
       document.head.appendChild(script);
     } else {
-      setPaydestalReady(true);
+      setPaystackReady(true);
     }
   }, []);
 
@@ -59,7 +67,7 @@ const CheckoutForm = () => {
     street: '',
     city: '',
     country: 'NG',
-    paymentMethod: 'paydestal'
+    paymentMethod: 'paystack'
   });
 
   const formatCurrency = (value) => {
@@ -119,38 +127,83 @@ const CheckoutForm = () => {
       }))
     };
 
+    setIsSubmitting(true);
     try {
-      // Show loading state
       toast({
         title: "Processing Payment",
         description: "Please wait while we prepare your payment...",
       });
 
-      // Call API to initiate payment
-      const response = await apiServerClient.fetch('/payment/initiate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData)
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Failed to initiate payment');
+      // Try to store the order server-side first, but don't let a database hiccup block the
+      // customer from paying - the full order is also embedded in the Paystack transaction's
+      // metadata below, so it's recoverable from Paystack directly even if this call fails.
+      let initiateResult = { success: true, orderId, reference: orderId, amount: paymentAmount, currency: 'NGN' };
+      try {
+        const response = await apiServerClient.fetch('/api/payment/initiate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderData)
+        });
+        const result = await response.json();
+        // 409 = something in the cart can't be sold, so don't take money for it
+        if (response.status === 409) {
+          toast({ title: 'Please Check Your Cart', description: result.error, variant: 'destructive' });
+          return;
+        }
+        if (response.ok && result.success) {
+          if (result.items && Math.abs(result.amount - paymentAmount) > 0.02) {
+            updatePrices(result.items);
+            toast({ title: 'Prices Updated', description: 'Menu prices changed since you filled your cart. Check the new total, then pay again.' });
+            return;
+          }
+          initiateResult = result;
+        } else {
+          console.error('Order pre-save failed, proceeding to payment anyway', result.error);
+        }
+      } catch (initiateError) {
+        console.error('Order pre-save request failed, proceeding to payment anyway', initiateError);
       }
 
-      // Store pending payment info in sessionStorage
-      sessionStorage.setItem('pendingPayment', JSON.stringify({
-        orderId,
-        paymentUrl: result.paymentUrl,
-        timestamp: Date.now()
-      }));
+      // Open Paystack inline checkout
+      const publicKey = paystackConfig?.clientId;
+      if (!publicKey || !window.PaystackPop) {
+        throw new Error('Payment gateway not available');
+      }
 
-      // Don't clear cart yet - wait for payment verification
-      // clearCart(); // Removed - cart cleared after successful payment verification
+      const handler = window.PaystackPop.setup({
+        key: publicKey,
+        email: formData.email,
+        amount: Math.round(initiateResult.amount * 100), // Paystack expects the amount in kobo
+        currency: initiateResult.currency,
+        ref: initiateResult.reference,
+        // Full order details, so /verify can reconstruct everything from Paystack directly if
+        // the pre-save above didn't make it to the database.
+        metadata: {
+          orderId,
+          customerName: formData.name,
+          customerPhone: formData.phone,
+          street: formData.street,
+          city: formData.city,
+          orderItems: orderData.orderItems,
+          custom_fields: [
+            { display_name: 'Items Ordered', variable_name: 'items_ordered', value: describeItems(initiateResult.items || orderData.orderItems) },
+            { display_name: 'Total Quantity', variable_name: 'total_quantity', value: String(cartCount) },
+            { display_name: 'Delivery Address', variable_name: 'delivery_address', value: `${formData.street}, ${formData.city}` },
+            { display_name: 'Customer Name', variable_name: 'customer_name', value: formData.name },
+            { display_name: 'Phone Number', variable_name: 'phone_number', value: formData.phone }
+          ]
+        },
+        callback: function () {
+          // The money may already be taken, so always leave checkout (staying invites paying twice).
+          // The success page verifies with retries and only clears the cart once confirmed.
+          navigate(`/payment-success?orderId=${initiateResult.reference}`);
+        },
+        onClose: function () {
+          // User closed the payment modal
+        }
+      });
 
-      // Redirect to payment gateway
-      window.location.href = result.paymentUrl;
+      handler.openIframe();
 
     } catch (error) {
       console.error('Payment initiation failed:', error);
@@ -159,6 +212,8 @@ const CheckoutForm = () => {
         description: error.message || "Failed to initiate payment. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -260,9 +315,8 @@ const CheckoutForm = () => {
             <Label htmlFor="country" className="text-foreground">Country *</Label>
             <Input
               id="country"
-              placeholder="NG"
-              value={formData.country}
-              onChange={(e) => handleInputChange('country', e.target.value)}
+              value="Nigeria"
+              readOnly
               className="bg-background text-foreground border-border"
               required
             />
@@ -275,13 +329,13 @@ const CheckoutForm = () => {
         
         <RadioGroup value={formData.paymentMethod} onValueChange={(value) => handleInputChange('paymentMethod', value)}>
           <div className="flex items-center space-x-3 p-4 rounded-lg border border-primary bg-primary/5 transition-smooth">
-            <RadioGroupItem value="paydestal" id="paydestal" />
-            <Label htmlFor="paydestal" className="flex-1 cursor-pointer text-foreground">
+            <RadioGroupItem value="paystack" id="paystack" />
+            <Label htmlFor="paystack" className="flex-1 cursor-pointer text-foreground">
               <div className="font-semibold flex items-center gap-2">
                 <CreditCard className="w-4 h-4 text-primary" />
                 Credit Card / Secure Payment
               </div>
-              <div className="text-sm text-muted-foreground">Pay securely via Paydestal</div>
+              <div className="text-sm text-muted-foreground">Pay securely via Paystack</div>
             </Label>
           </div>
           
@@ -300,10 +354,15 @@ const CheckoutForm = () => {
 
       <Button
         type="submit"
-        disabled={!paydestalReady || !paydestalConfig?.clientId || cartItems.length === 0 || parseFloat(total) <= 0}
+        disabled={!paystackReady || !paystackConfig?.clientId || cartItems.length === 0 || parseFloat(total) <= 0 || isSubmitting}
         className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-7 text-xl font-bold shadow-soft-lg hover:shadow-soft-xl transition-smooth"
       >
-        {!paydestalReady || !paydestalConfig?.clientId ? (
+        {isSubmitting ? (
+          <>
+            <Loader2 className="mr-2 w-6 h-6 animate-spin" />
+            Processing...
+          </>
+        ) : !paystackReady || !paystackConfig?.clientId ? (
           <>
             <Loader2 className="mr-2 w-6 h-6 animate-spin" />
             Loading Payment Gateway...
