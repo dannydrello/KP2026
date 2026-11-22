@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS transactions_legacy (
   city text,
   country varchar(2) DEFAULT 'NG',
   orderItems jsonb,
-  paydestal_reference varchar(255),
+  gateway_reference varchar(255),
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );

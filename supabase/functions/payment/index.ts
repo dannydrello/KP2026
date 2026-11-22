@@ -2,7 +2,6 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { insertTransaction, getTransaction, getProducts, markFailed, markPaidOnce } from '../_shared/db.ts';
 import { parseJson, priceOrder, productIds, readItems, text } from '../_shared/order.ts';
 import { verifyPaymentWithPaystack, verifyWebhookSignature } from '../_shared/paystack.ts';
-import { sendCustomerReceipt, sendKitchenNotification } from '../_shared/whatsapp.ts';
 import { sendCustomerReceiptEmail, sendOwnerOrderNotificationEmail } from '../_shared/email.ts';
 
 const PAYSTACK_PUBLIC_KEY = Deno.env.get('PAYSTACK_PUBLIC_KEY') || '';
@@ -188,15 +187,9 @@ async function settlePayment(payment: SuccessfulPayment) {
   };
 
   const channels = [
-    { name: 'kitchen WhatsApp', send: sendKitchenNotification },
     { name: 'owner email', send: sendOwnerOrderNotificationEmail },
     // An order under review hasn't been confirmed, so the customer gets no receipt yet.
-    ...(matches
-      ? [
-        { name: 'customer WhatsApp', send: sendCustomerReceipt },
-        { name: 'customer email', send: sendCustomerReceiptEmail },
-      ]
-      : []),
+    ...(matches ? [{ name: 'customer email', send: sendCustomerReceiptEmail }] : []),
   ];
 
   // Awaited because Edge Functions can be frozen once the response is sent. The senders report

@@ -1,4 +1,4 @@
-// Backend runs entirely on Supabase Edge Functions now (no Vercel/Express).
+// The backend runs on Supabase Edge Functions.
 // Local dev target assumes `supabase start` + `supabase functions serve` (http://127.0.0.1:54321).
 const API_SERVER_URL = import.meta.env.DEV
   ? 'http://127.0.0.1:54321/functions/v1'
